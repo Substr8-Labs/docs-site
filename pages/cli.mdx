@@ -1,0 +1,117 @@
+# CLI Reference
+
+## Installation
+
+```bash
+pip install substr8
+```
+
+## Commands
+
+### `substr8 init`
+
+Scaffold a new project with framework examples.
+
+```bash
+substr8 init [path] [options]
+```
+
+**Options:**
+- `--framework` — `all`, `langgraph`, `pydantic-ai`, `autogen` (default: `all`)
+- `--api-key` — Pre-fill API key in .env
+- `--minimal` — Create minimal structure
+
+### `substr8 run`
+
+Run an agent with governance enabled.
+
+```bash
+substr8 run <script> [options]
+```
+
+**Options:**
+- `--framework` — Force framework detection (`auto`, `langgraph`, `pydantic-ai`, `autogen`)
+- `--local` / `--cloud` — Use local or cloud MCP (default: `--cloud`)
+- `--out` — Output directory for RunProof (default: `./runproofs`)
+- `--mcp-url` — Custom MCP server URL
+- `--no-tarball` — Don't create .runproof.tgz archive
+- `--label` — Add labels in `k=v` format (can repeat)
+
+**Examples:**
+```bash
+# Basic run
+substr8 run agent.py
+
+# Force framework
+substr8 run agent.py --framework langgraph
+
+# Local MCP server
+substr8 run agent.py --local
+
+# Custom output
+substr8 run agent.py --out ./proofs --label env=prod
+```
+
+### `substr8 verify`
+
+Verify a RunProof bundle offline.
+
+```bash
+substr8 verify <path> [options]
+```
+
+**Options:**
+- `--json` — Output as JSON
+- `--strict` — Also verify signature
+
+**Exit codes:**
+- `0` — Valid
+- `40` — Root hash mismatch
+- `41` — Ledger chain invalid
+- `42` — CIA validation failed
+- `43` — GAM validation failed
+- `44` — Signature invalid
+
+### `substr8 mcp`
+
+MCP server commands.
+
+```bash
+# Start local MCP server
+substr8 mcp start --local
+
+# Start with auth required
+substr8 mcp start --local --require-auth
+
+# Custom port
+substr8 mcp start --local --port 9988
+```
+
+### `substr8 info`
+
+Show platform information.
+
+```bash
+substr8 info
+```
+
+### `substr8 badge`
+
+Generate README badge for a run.
+
+```bash
+substr8 badge <run-id>
+```
+
+Output:
+```markdown
+[![Verified by Substr8](https://verify.substr8labs.com/badge/run-6c39af.svg)](https://verify.substr8labs.com/run/run-6c39af)
+```
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SUBSTR8_MCP_URL` | Default MCP server URL |
+| `SUBSTR8_RUN_ID` | Override run ID |
+| `SUBSTR8_AGENT_ID` | Agent identifier for GAM |

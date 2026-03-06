@@ -1,0 +1,100 @@
+# Framework Integrations
+
+Substr8 works with any framework that supports tool calling.
+
+## Supported Frameworks
+
+| Framework | Status | Auto-detect |
+|-----------|--------|-------------|
+| LangGraph | ✅ | Yes |
+| PydanticAI | ✅ | Yes |
+| AutoGen | ✅ | Yes |
+| CrewAI | ⚡ Coming | — |
+| DSPy | ⚡ Coming | — |
+
+## LangGraph
+
+```python
+from langgraph.prebuilt import create_react_agent
+from langchain_anthropic import ChatAnthropic
+
+llm = ChatAnthropic(model="claude-sonnet-4-20250514")
+tools = [...]  # Your tools
+
+agent = create_react_agent(llm, tools)
+```
+
+Run with governance:
+```bash
+substr8 run agent.py
+```
+
+## PydanticAI
+
+```python
+from pydantic_ai import Agent
+
+agent = Agent(
+    'anthropic:claude-sonnet-4-20250514',
+    tools=[...],
+)
+```
+
+Run with governance:
+```bash
+substr8 run agent.py --framework pydantic-ai
+```
+
+## AutoGen
+
+```python
+from autogen import AssistantAgent, UserProxyAgent
+
+assistant = AssistantAgent("assistant", llm_config={...})
+user = UserProxyAgent("user")
+```
+
+Run with governance:
+```bash
+substr8 run agent.py --framework autogen
+```
+
+## Zero-Friction Integration
+
+Wrap any agent with `govern()`:
+
+```python
+from substr8 import govern
+
+# Before
+agent = create_react_agent(llm, tools)
+
+# After  
+agent = govern(create_react_agent(llm, tools))
+```
+
+The wrapper automatically:
+1. Starts run lifecycle
+2. Wraps tool calls
+3. Records audit entries
+4. Generates RunProof on completion
+
+## Framework Detection
+
+Substr8 auto-detects frameworks by scanning imports:
+
+```python
+# Detected as langgraph
+from langgraph.prebuilt import create_react_agent
+
+# Detected as pydantic-ai
+from pydantic_ai import Agent
+
+# Detected as autogen
+from autogen import AssistantAgent
+```
+
+Force detection with `--framework`:
+```bash
+substr8 run agent.py --framework langgraph
+```

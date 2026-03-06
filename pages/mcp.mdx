@@ -1,0 +1,84 @@
+# MCP Server
+
+Substr8 exposes governance through the **Model Context Protocol (MCP)**.
+
+## Public Endpoint
+
+```
+https://mcp.substr8labs.com
+```
+
+## Local Server
+
+```bash
+substr8 mcp start --local
+```
+
+Default port: `9988`
+
+## Available Tools (12)
+
+### Governance
+
+| Tool | Description |
+|------|-------------|
+| `run.start` | Start a governed run |
+| `run.end` | End a run, finalize RunProof |
+| `tool.invoke` | Record a tool invocation |
+| `policy.check` | Check if action is allowed |
+
+### Audit
+
+| Tool | Description |
+|------|-------------|
+| `audit.timeline` | Get audit entries for a run |
+| `verify.run` | Verify a run's integrity |
+
+### Memory
+
+| Tool | Description |
+|------|-------------|
+| `memory.write` | Store a memory with provenance |
+| `memory.search` | Semantic search over memories |
+
+### CIA (Conversation Integrity)
+
+| Tool | Description |
+|------|-------------|
+| `cia.status` | Check CIA proxy health |
+| `cia.report` | Get aggregate stats |
+| `cia.repairs` | List recent repairs |
+| `cia.receipts` | Query receipts by run |
+
+## Claude Desktop Config
+
+```json
+{
+  "mcpServers": {
+    "substr8": {
+      "url": "https://mcp.substr8labs.com",
+      "headers": {
+        "X-Substr8-Key": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+## Authentication
+
+Cloud MCP requires an API key:
+
+```
+X-Substr8-Key: your-api-key
+```
+
+Local mode auto-generates a key on startup.
+
+## Rate Limits
+
+| Tier | Requests/min |
+|------|--------------|
+| Free | 100 |
+| Pro | 1,000 |
+| Enterprise | 10,000 |

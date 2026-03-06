@@ -1,0 +1,78 @@
+# Quick Start
+
+Get up and running with Substr8 in 2 minutes.
+
+## Installation
+
+```bash
+pip install substr8
+```
+
+## Initialize a Project
+
+```bash
+substr8 init my-agent
+cd my-agent
+```
+
+This creates:
+```
+my-agent/
+  examples/
+    langgraph/
+    autogen/
+    pydantic-ai/
+  runproofs/
+  .env.example
+  README.md
+```
+
+## Run with Governance
+
+```bash
+substr8 run examples/langgraph/agent.py
+```
+
+Output:
+```
+Substr8 Governance: ACTIVE
+
+Run ID: run-6c39af
+
+ACC policy loaded
+CIA integrity checks enabled
+DCT ledger initialized
+
+Running agent...
+
+Run completed ✓
+RunProof generated: ./runproofs/run-6c39af.runproof.tgz
+
+Verify locally:  substr8 verify runproofs/run-6c39af.runproof.tgz
+Verify online:   https://verify.substr8labs.com/?hash=7afc3e...
+```
+
+## Verify the Run
+
+```bash
+substr8 verify runproofs/run-6c39af.runproof.tgz
+```
+
+Output:
+```
+RunProof Verified ✓
+
+Run:     run-6c39af
+Agent:   langgraph:researcher
+Policy:  verified
+Ledger:  chain valid ✓ (24 entries)
+CIA receipts: present ✓
+Memory provenance: verified ✓
+```
+
+## What's Next?
+
+- [CLI Reference](/cli) — All available commands
+- [RunProof](/runproof) — Understanding verification artifacts
+- [MCP Server](/mcp) — Connect to the governance plane
+- [Framework Integrations](/frameworks) — LangGraph, AutoGen, PydanticAI

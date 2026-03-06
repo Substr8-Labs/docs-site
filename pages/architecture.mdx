@@ -1,0 +1,108 @@
+# Architecture
+
+## Overview
+
+```
+Agent Framework (LangGraph / AutoGen / etc)
+        │
+        ▼
+      MCP Interface
+        │
+        ▼
+┌─────────────────────────┐
+│  Substr8 Governance     │
+│  ├─ FDAA (Agent Spec)   │
+│  ├─ ACC (Policy)        │
+│  ├─ RIL (Run Lifecycle) │
+│  ├─ DCT (Audit Ledger)  │
+│  ├─ CIA (Integrity)     │
+│  └─ GAM (Memory)        │
+└─────────────────────────┘
+        │
+        ▼
+    RunProof Artifact
+```
+
+## Components
+
+### FDAA — File-Driven Agent Architecture
+
+Defines agent identity as files:
+- `agent.md` — Agent specification
+- `tools/*.md` — Tool definitions
+- Produces deterministic hash for versioning
+
+### ACC — Agent Capability Control
+
+Policy enforcement:
+- What tools can this agent use?
+- What data can it access?
+- Runtime capability checking
+
+### RIL — Run Integrity Layer
+
+Run lifecycle management:
+- Run ID generation
+- Start/end tracking
+- State machine for run phases
+
+### DCT — Deterministic Computation Trail
+
+Tamper-evident audit ledger:
+- Hash-chained entries
+- Every action recorded
+- Verifiable offline
+
+### CIA — Conversation Integrity Assurance
+
+Request validation:
+- Validates tool_use/tool_result pairing
+- Repairs broken message sequences
+- Produces integrity receipts
+
+### GAM — Git-Native Agent Memory
+
+Memory with provenance:
+- Semantic search
+- Git-backed versioning
+- Typed hints for retrieval
+
+## Data Flow
+
+```
+1. Agent starts run
+   └─→ RIL generates run ID
+
+2. Agent calls tool
+   └─→ ACC checks policy
+   └─→ DCT records action
+   └─→ CIA validates request
+
+3. Agent writes memory
+   └─→ GAM stores with provenance
+   └─→ DCT records operation
+
+4. Run completes
+   └─→ RIL finalizes run
+   └─→ RunProof generated
+```
+
+## Skill-Based Architecture
+
+Governance is invoked as tools, not intercepted:
+
+```
+❌ OLD: Client → Proxy → Gateway → LLM
+         (proxy in traffic path)
+
+✅ NEW: Client → Gateway → LLM
+                   ↓
+            Governance Skill
+         (invoked when needed)
+```
+
+Benefits:
+- No header modification
+- Isolated failures
+- Lower latency
+- Easier debugging

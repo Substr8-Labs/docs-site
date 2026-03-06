@@ -1,0 +1,72 @@
+# RunProof
+
+A **RunProof** is a portable, cryptographically verifiable artifact produced for every governed agent run.
+
+## What It Contains
+
+```
+runproof/
+  run.json              # Run metadata
+  agent/
+    fdaa.manifest.json  # Agent identity hash
+  policy/
+    acc.policy.json     # Policy that was enforced
+  ledger/
+    dct.ledger.jsonl    # Tamper-evident audit trail
+  cia/
+    cia.receipts.jsonl  # Request integrity receipts
+  memory/
+    gam.pointers.jsonl  # Memory operation pointers
+  RUNPROOF.sha256       # Root hash
+```
+
+## What It Proves
+
+| Component | Proves |
+|-----------|--------|
+| `fdaa.manifest.json` | Which agent ran (hash of agent definition) |
+| `acc.policy.json` | What policy was enforced |
+| `dct.ledger.jsonl` | What actions occurred (audit trail) |
+| `cia.receipts.jsonl` | That requests weren't tampered with |
+| `gam.pointers.jsonl` | What memory operations happened |
+| `RUNPROOF.sha256` | That none of the above was modified |
+
+## Verification
+
+### Local Verification
+
+```bash
+substr8 verify runproof.tgz
+```
+
+No network required. Verifies:
+1. Root hash matches contents
+2. DCT ledger chain is valid
+3. CIA receipts link to ledger
+4. GAM pointers link to ledger
+5. FDAA agent hash matches
+
+### Online Verification
+
+Upload to [verify.substr8labs.com](https://verify.substr8labs.com) or use the API:
+
+```bash
+curl -X POST https://verify.substr8labs.com/api/verify \
+  -F "runproof=@runproof.tgz"
+```
+
+## Comparison
+
+| Technology | What It Verifies |
+|------------|-----------------|
+| Docker | Container image integrity |
+| SBOM | Software bill of materials |
+| Sigstore | Software supply chain |
+| **RunProof** | **AI agent run integrity** |
+
+## Use Cases
+
+- **Audit trails** — Prove what an agent did to regulators
+- **CI/CD gates** — Block deployment if verification fails
+- **Debugging** — Replay exactly what happened
+- **Compliance** — Attach to reports, PRs, tickets
