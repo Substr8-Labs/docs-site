@@ -9,8 +9,8 @@ Substr8 works with any framework that supports tool calling.
 | LangGraph | ✅ | Yes |
 | PydanticAI | ✅ | Yes |
 | AutoGen | ✅ | Yes |
-| CrewAI | ⚡ Coming | — |
-| DSPy | ⚡ Coming | — |
+| CrewAI | ✅ | Yes |
+| DSPy | ✅ | Yes |
 
 ## LangGraph
 
@@ -57,6 +57,39 @@ user = UserProxyAgent("user")
 Run with governance:
 ```bash
 substr8 run agent.py --framework autogen
+```
+
+## CrewAI
+
+```python
+from crewai import Agent, Task, Crew
+
+researcher = Agent(role="Researcher", goal="Find information", ...)
+task = Task(description="Research topic", agent=researcher)
+crew = Crew(agents=[researcher], tasks=[task])
+```
+
+Run with governance:
+```bash
+substr8 run agent.py --framework crewai
+```
+
+## DSPy
+
+```python
+import dspy
+
+lm = dspy.LM("anthropic/claude-sonnet-4-20250514")
+dspy.configure(lm=lm)
+
+class MyModule(dspy.Module):
+    def forward(self, question):
+        return dspy.ChainOfThought("question -> answer")(question=question)
+```
+
+Run with governance:
+```bash
+substr8 run agent.py --framework dspy
 ```
 
 ## Zero-Friction Integration

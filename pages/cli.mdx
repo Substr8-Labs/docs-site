@@ -87,6 +87,46 @@ substr8 mcp start --local --require-auth
 substr8 mcp start --local --port 9988
 ```
 
+### `substr8 connect`
+
+Connect to a local MCP server (for IDEs and tools).
+
+```bash
+# Connect to default local server
+substr8 connect
+
+# Connect with custom URL
+substr8 connect --url http://localhost:9988
+```
+
+The connection is persisted in `~/.substr8/config.json`.
+
+### `substr8 disconnect`
+
+Disconnect from the current MCP server.
+
+```bash
+substr8 disconnect
+```
+
+### `substr8 status`
+
+Show current connection and governance status.
+
+```bash
+substr8 status
+```
+
+Output:
+```
+Substr8 Status
+━━━━━━━━━━━━━━
+MCP:     connected (local @ localhost:9988)
+Mode:    governance enabled
+Runs:    12 total, 3 active
+Version: 1.5.0
+```
+
 ### `substr8 info`
 
 Show platform information.
