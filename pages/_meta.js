@@ -3,7 +3,7 @@ export default {
   quickstart: 'Getting Started',
   sdk: 'SDK Reference',
   adapters: 'Framework Adapters',
-  api: 'API Reference',
+  "api-reference": 'API Reference',
   mcp: 'MCP Server',
   cli: 'CLI Reference',
   runproof: 'RunProof',
