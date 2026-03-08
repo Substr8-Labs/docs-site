@@ -1,0 +1,493 @@
+# API Reference
+
+The Substr8 Trust Plane REST API.
+
+**Base URL:** `https://api.substr8labs.com/v1` (or your self-hosted instance)
+
+---
+
+## Authentication
+
+```
+Authorization: Bearer <api_key>
+```
+
+---
+
+## Response Format
+
+**Success:**
+```json
+{
+  "ok": true,
+  "data": { ... }
+}
+```
+
+**Error:**
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "AGENT_NOT_FOUND",
+    "message": "No registered agent found"
+  }
+}
+```
+
+---
+
+## Agent Identity (TowerHQ)
+
+### Register Agent
+
+```
+POST /agents
+```
+
+Register an agent definition.
+
+**Request:**
+```json
+{
+  "name": "support-agent",
+  "version": "1.0.0",
+  "framework": "langgraph",
+  "manifest": {
+    "soul": "You are a helpful support agent...",
+    "capabilities": ["search", "email"]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "agent_id": "support-agent",
+    "version": "1.0.0",
+    "identity_hash": "sha256:abc123...",
+    "status": "registered"
+  }
+}
+```
+
+### Verify Agent
+
+```
+POST /agents/verify
+```
+
+Verify an identity hash.
+
+**Request:**
+```json
+{
+  "identity_hash": "sha256:abc123..."
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "verified": true,
+    "agent_id": "support-agent",
+    "version": "1.0.0",
+    "status": "active"
+  }
+}
+```
+
+### Get Agent
+
+```
+GET /agents/{agent_id}
+```
+
+Get agent details.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "agent_id": "support-agent",
+    "latest_version": "1.0.3",
+    "framework": "langgraph",
+    "status": "active"
+  }
+}
+```
+
+### List Versions
+
+```
+GET /agents/{agent_id}/versions
+```
+
+List all versions of an agent.
+
+---
+
+## Run Lifecycle (ThreadHQ)
+
+### Start Run
+
+```
+POST /runs/start
+```
+
+Start a new execution run.
+
+**Request:**
+```json
+{
+  "agent_id": "support-agent",
+  "agent_hash": "sha256:abc123...",
+  "framework": "langgraph",
+  "metadata": {
+    "user_id": "u123"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "run_id": "run-abc123",
+    "status": "active",
+    "started_at": "2026-03-08T12:00:00Z"
+  }
+}
+```
+
+### Emit Event
+
+```
+POST /events
+```
+
+Emit a trust event.
+
+**Request:**
+```json
+{
+  "run_id": "run-abc123",
+  "event_type": "tool.called",
+  "timestamp": "2026-03-08T12:00:01Z",
+  "payload": {
+    "tool": "web_search",
+    "input": {"query": "weather"}
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "event_id": "evt-xyz789",
+    "event_hash": "sha256:def456...",
+    "prev_hash": "sha256:abc123..."
+  }
+}
+```
+
+### Batch Events
+
+```
+POST /events/batch
+```
+
+Emit multiple events.
+
+**Request:**
+```json
+{
+  "events": [
+    {"run_id": "...", "event_type": "...", "payload": {...}},
+    {"run_id": "...", "event_type": "...", "payload": {...}}
+  ]
+}
+```
+
+### End Run
+
+```
+POST /runs/{run_id}/end
+```
+
+End a run successfully.
+
+**Request:**
+```json
+{
+  "status": "completed",
+  "metadata": {
+    "summary": "Processed user request"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "run_id": "run-abc123",
+    "status": "completed",
+    "event_count": 5,
+    "root_hash": "sha256:..."
+  }
+}
+```
+
+### Fail Run
+
+```
+POST /runs/{run_id}/fail
+```
+
+Mark a run as failed.
+
+**Request:**
+```json
+{
+  "error_code": "TOOL_TIMEOUT",
+  "error_message": "Search timed out"
+}
+```
+
+### Get Run
+
+```
+GET /runs/{run_id}
+```
+
+Get run details.
+
+### Get Timeline
+
+```
+GET /runs/{run_id}/timeline
+```
+
+Get ordered event timeline.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "run_id": "run-abc123",
+    "events": [
+      {"event_type": "run.started", "timestamp": "..."},
+      {"event_type": "tool.called", "timestamp": "..."},
+      {"event_type": "tool.result", "timestamp": "..."}
+    ]
+  }
+}
+```
+
+---
+
+## Governance (ACC)
+
+### Check Capability
+
+```
+POST /capabilities/check
+```
+
+Check if an agent can perform an action.
+
+**Request:**
+```json
+{
+  "agent_id": "support-agent",
+  "capability": "send_email",
+  "context": {
+    "recipient": "user@example.com"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "allowed": true,
+    "policy_id": "email-policy-v2",
+    "reason": "Within allowed scope"
+  }
+}
+```
+
+---
+
+## Memory (GAM)
+
+### Write Memory
+
+```
+POST /memory/write
+```
+
+Write memory with provenance.
+
+**Request:**
+```json
+{
+  "agent_id": "support-agent",
+  "content": "User prefers email communication",
+  "memory_type": "user_preference",
+  "metadata": {
+    "user_id": "u123"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "memory_id": "mem-789",
+    "stored": true
+  }
+}
+```
+
+### Search Memory
+
+```
+POST /memory/search
+```
+
+Semantic memory search.
+
+**Request:**
+```json
+{
+  "agent_id": "support-agent",
+  "query": "communication preference",
+  "limit": 5
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "results": [
+      {
+        "memory_id": "mem-789",
+        "content": "User prefers email communication",
+        "score": 0.94,
+        "provenance": {
+          "run_id": "run-abc123",
+          "timestamp": "..."
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Verification (CIA/RunProof)
+
+### Verify Run
+
+```
+POST /runs/{run_id}/verify
+```
+
+Verify hash chain integrity.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "run_id": "run-abc123",
+    "verified": true,
+    "event_count": 5,
+    "root_hash": "sha256:...",
+    "chain_status": "valid"
+  }
+}
+```
+
+### Get Receipt
+
+```
+GET /runs/{run_id}/receipt
+```
+
+Get cryptographic receipt.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "run_id": "run-abc123",
+    "identity_hash": "sha256:...",
+    "root_hash": "sha256:...",
+    "receipt_url": "https://verify.substr8labs.com/run-abc123"
+  }
+}
+```
+
+---
+
+## Canonical Event Types
+
+| Event | Description |
+|-------|-------------|
+| `agent.defined` | Agent manifest loaded |
+| `agent.hashed` | Identity hash computed |
+| `run.started` | Execution begins |
+| `run.completed` | Execution succeeds |
+| `run.failed` | Execution fails |
+| `prompt.sent` | Prompt sent to model |
+| `model.responded` | Model response received |
+| `tool.called` | Tool invocation started |
+| `tool.result` | Tool result returned |
+| `memory.read` | Memory retrieved |
+| `memory.write` | Memory stored |
+| `capability.checked` | Policy evaluated |
+| `decision.recorded` | Decision logged |
+
+---
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `AGENT_NOT_FOUND` | Agent not in registry |
+| `RUN_NOT_FOUND` | Run ID not found |
+| `INVALID_EVENT_TYPE` | Unknown event type |
+| `CHAIN_BROKEN` | Hash chain verification failed |
+| `CAPABILITY_DENIED` | Policy check failed |
+| `RATE_LIMITED` | Too many requests |
+
+---
+
+## Rate Limits
+
+| Tier | Requests/min |
+|------|-------------|
+| Free | 60 |
+| Pro | 600 |
+| Enterprise | Unlimited |

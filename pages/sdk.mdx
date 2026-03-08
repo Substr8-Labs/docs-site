@@ -1,0 +1,230 @@
+# SDK Reference
+
+The Substr8 Python SDK provides 10 core functions for agent governance and observability.
+
+## Installation
+
+```bash
+pip install substr8
+```
+
+## The 10 Core Functions
+
+### Agent Identity (TowerHQ)
+
+#### `agent_register()`
+
+Register an agent definition in TowerHQ.
+
+```python
+result = client.agent_register(
+    agent_id="support-agent",
+    version="1.0.0",
+    manifest={
+        "soul": "You are a helpful support agent...",
+        "capabilities": ["search", "email", "ticket"]
+    },
+    framework="langgraph"
+)
+# Returns: {"agent_id": "support-agent", "version": "1.0.0", "status": "registered"}
+```
+
+#### `agent_hash()`
+
+Compute identity hash for an agent manifest locally.
+
+```python
+hash = client.agent_hash({
+    "name": "support-agent",
+    "version": "1.0.0",
+    "capabilities": ["search", "email"]
+})
+# Returns: "sha256:abc123..."
+```
+
+#### `agent_verify()`
+
+Verify an agent identity hash against the TowerHQ registry.
+
+```python
+result = client.agent_verify("sha256:abc123...")
+# Returns: {"verified": True, "agent_id": "support-agent", "version": "1.0.0"}
+```
+
+---
+
+### Run Lifecycle (ThreadHQ)
+
+#### `run_start()`
+
+Start a new execution run.
+
+```python
+run = client.run_start(
+    agent_id="my-agent",
+    agent_hash="sha256:...",  # Optional
+    framework="langgraph",     # Optional
+    metadata={"user_id": "u123"}  # Optional
+)
+# Returns: Run(run_id="run-abc123", agent_id="my-agent", started_at="...", status="active")
+```
+
+#### `run_event()`
+
+Emit a trust event for the current run.
+
+```python
+event = client.run_event(
+    event_type="tool.called",
+    payload={
+        "tool": "web_search",
+        "input": {"query": "weather today"}
+    }
+)
+# Returns: Event(event_id="evt-xyz", event_hash="sha256:...", prev_hash="sha256:...")
+```
+
+**Canonical Event Types:**
+
+| Event | Description |
+|-------|-------------|
+| `agent.defined` | Agent manifest loaded |
+| `agent.hashed` | Identity hash computed |
+| `run.started` | Execution begins |
+| `run.completed` | Execution succeeds |
+| `run.failed` | Execution fails |
+| `prompt.sent` | Prompt sent to model |
+| `model.responded` | Model response received |
+| `tool.called` | Tool invocation started |
+| `tool.result` | Tool result returned |
+| `memory.read` | Memory retrieved |
+| `memory.write` | Memory stored |
+| `capability.checked` | Policy evaluated |
+| `decision.recorded` | Decision logged |
+
+#### `run_end()`
+
+End an execution run.
+
+```python
+result = client.run_end(
+    status="completed",  # or "failed"
+    metadata={"summary": "..."}
+)
+# Returns: {"run_id": "run-abc123", "status": "completed", "event_count": 5, "root_hash": "sha256:..."}
+```
+
+---
+
+### Governance (ACC)
+
+#### `capability_check()`
+
+Check if an agent is allowed to perform an action.
+
+```python
+check = client.capability_check(
+    capability="send_email",
+    agent_id="support-agent",
+    context={
+        "recipient": "user@example.com",
+        "subject": "Order confirmation"
+    }
+)
+# Returns: {"allowed": True, "policy_id": "email-policy-v2", "reason": "Within allowed scope"}
+```
+
+---
+
+### Memory (GAM)
+
+#### `memory_write()`
+
+Write memory with provenance tracking.
+
+```python
+result = client.memory_write(
+    content="User prefers email over chat",
+    memory_type="user_preference",
+    metadata={"user_id": "u123"}
+)
+# Returns: {"inserted": 1}
+```
+
+#### `memory_search()`
+
+Search memory with semantic retrieval.
+
+```python
+results = client.memory_search(
+    query="user communication preference",
+    limit=5
+)
+# Returns: [{"content": "User prefers email...", "score": 0.94, ...}, ...]
+```
+
+---
+
+### Verification (CIA/RunProof)
+
+#### `verify_run()`
+
+Verify the integrity of a run's hash chain.
+
+```python
+verification = client.verify_run("run-abc123")
+# Returns: {"run_id": "run-abc123", "verified": True, "event_count": 5, "root_hash": "sha256:..."}
+```
+
+---
+
+## Context Manager
+
+Automatically ends runs on exit:
+
+```python
+with Substr8Client() as client:
+    run = client.run_start(agent_id="my-agent")
+    client.run_event("tool.called", {...})
+    # Run ends automatically
+    # Status is "failed" if exception, "completed" otherwise
+```
+
+---
+
+## Configuration
+
+```python
+from substr8 import Substr8Config
+
+config = Substr8Config(
+    base_url="http://localhost:8100",           # Event Ingest API
+    agent_registry_url="http://localhost:8099", # TowerHQ
+    gam_url="http://localhost:8091",            # GAM Memory
+    acc_url="http://localhost:8096",            # ACC Governance
+    api_key="sk-...",                           # Optional API key
+    agent_id="default-agent",                   # Default agent ID
+    timeout=30.0,                               # Request timeout
+)
+
+client = Substr8Client(config)
+```
+
+---
+
+## Error Handling
+
+```python
+from substr8 import Substr8Client
+import httpx
+
+try:
+    client = Substr8Client()
+    run = client.run_start(agent_id="my-agent")
+    # ... your agent logic ...
+    client.run_end()
+except httpx.HTTPStatusError as e:
+    print(f"API error: {e.response.status_code}")
+except httpx.ConnectError:
+    print("Could not connect to Substr8 services")
+```

@@ -1,9 +1,11 @@
 export default {
   index: 'Introduction',
-  quickstart: 'Quick Start',
+  quickstart: 'Getting Started',
+  sdk: 'SDK Reference',
+  adapters: 'Framework Adapters',
+  api: 'API Reference',
+  mcp: 'MCP Server',
   cli: 'CLI Reference',
   runproof: 'RunProof',
-  mcp: 'MCP Server',
-  frameworks: 'Framework Integrations',
   architecture: 'Architecture'
 }

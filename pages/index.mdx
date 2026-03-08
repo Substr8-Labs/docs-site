@@ -2,37 +2,149 @@
 
 **Governance infrastructure for AI agents.**
 
-> Frameworks build agents. Substr8 proves what they did.
+Frameworks build agents. Substr8 proves what they did.
+
+---
 
 ## Quick Start
 
 ```bash
 pip install substr8
-substr8 init my-agent
-cd my-agent
-substr8 run examples/langgraph/agent.py
 ```
 
-Every governed run produces a **RunProof** — a portable, cryptographically verifiable artifact that proves what happened.
+```python
+from substr8 import Substr8Client
+
+client = Substr8Client()
+
+# Start tracking
+run = client.run_start(agent_id="my-agent")
+
+# Emit events
+client.run_event("tool.called", {"tool": "search"})
+
+# End and verify
+client.run_end()
+client.verify_run(run.run_id)  # {"verified": True}
+```
+
+**[Get started in 5 minutes →](/getting-started)**
+
+---
+
+## Framework Adapters
+
+One line to add observability:
+
+```python
+# OpenAI
+from substr8.adapters.openai import wrap_openai
+client = wrap_openai(OpenAI())
+
+# Anthropic
+from substr8.adapters.anthropic import wrap_anthropic
+client = wrap_anthropic(Anthropic())
+
+# LangGraph
+from substr8.adapters.langgraph import create_callback
+graph.invoke(state, config={"callbacks": [create_callback()]})
+
+# CrewAI
+from substr8.adapters.crewai import wrap_crew
+wrap_crew(crew).kickoff()
+```
+
+**[View all adapters →](/adapters)**
+
+---
 
 ## Why Substr8?
 
-AI agents today have a trust problem. When an agent says "I searched the web and wrote the memory" — did it actually?
+AI agents have a trust problem. When an agent says "I searched the web and wrote the memory" — did it actually?
 
-Most systems rely on logs. Substr8 produces **cryptographic receipts**.
+Most systems rely on logs. **Substr8 produces cryptographic receipts.**
+
+| Logs | Substr8 |
+|------|---------|
+| Can be modified | Immutable hash chain |
+| Trust the system | Verify independently |
+| "It happened" | "Here's proof" |
+
+---
 
 ## Core Concepts
 
-- **RunProof** — Verification artifact for every governed run
-- **FDAA** — File-Driven Agent Architecture (agent identity)
-- **ACC** — Agent Capability Control (policy enforcement)
-- **DCT** — Deterministic Computation Trail (audit ledger)
-- **CIA** — Conversation Integrity Assurance (request validation)
-- **GAM** — Git-Native Agent Memory (memory provenance)
+### RunProof
+
+A portable, cryptographically verifiable artifact for every governed run.
+
+**[Learn more →](/runproof)**
+
+### TowerHQ
+
+Agent identity registry. Define agents, compute identity hashes, verify authenticity.
+
+### ThreadHQ
+
+Execution observability. Track every prompt, response, tool call, and decision.
+
+### Governance
+
+Policy enforcement. Check capabilities before actions, audit everything.
+
+---
+
+## The 10 SDK Functions
+
+| Function | Purpose |
+|----------|---------|
+| `agent_register` | Register agent in TowerHQ |
+| `agent_hash` | Compute identity hash |
+| `agent_verify` | Verify agent identity |
+| `run_start` | Start execution run |
+| `run_event` | Emit trust event |
+| `run_end` | End run |
+| `capability_check` | Check policy |
+| `memory_write` | Write to memory |
+| `memory_search` | Search memory |
+| `verify_run` | Verify hash chain |
+
+**[Full SDK reference →](/sdk)**
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│            Your Agent Code              │
+├─────────────────────────────────────────┤
+│         Substr8 SDK / Adapters          │
+├─────────────────────────────────────────┤
+│  TowerHQ  │  ThreadHQ  │  Governance    │
+│  Identity │  Execution │  Policies      │
+├─────────────────────────────────────────┤
+│              Trust Plane                │
+│    Events → Hash Chain → RunProof       │
+└─────────────────────────────────────────┘
+```
+
+---
 
 ## Links
 
 - [GitHub](https://github.com/Substr8-Labs/substr8-cli)
+- [PyPI](https://pypi.org/project/substr8/)
 - [MCP Server](https://mcp.substr8labs.com)
 - [Verify RunProof](https://verify.substr8labs.com)
-- [PyPI](https://pypi.org/project/substr8/)
+
+---
+
+## Documentation
+
+- [Getting Started](/getting-started) — 5-minute quickstart
+- [SDK Reference](/sdk) — All 10 functions
+- [Adapters](/adapters) — Framework integrations
+- [API Reference](/api) — REST endpoints
+- [RunProof](/runproof) — Verification artifacts
+- [CLI Reference](/cli) — Command-line tools

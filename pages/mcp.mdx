@@ -1,84 +1,410 @@
 # MCP Server
 
-Substr8 exposes governance through the **Model Context Protocol (MCP)**.
+The Substr8 MCP (Model Context Protocol) server provides 16 tools for agent governance.
 
-## Public Endpoint
+**Endpoint:** `https://mcp.substr8labs.com` (or `http://localhost:3456` for local)
 
-```
-https://mcp.substr8labs.com
-```
+---
 
-## Local Server
+## Quick Start
 
-```bash
-substr8 mcp start --local
-```
+### Connect from Claude Desktop
 
-Default port: `9988`
-
-## Available Tools (12)
-
-### Governance
-
-| Tool | Description |
-|------|-------------|
-| `run.start` | Start a governed run |
-| `run.end` | End a run, finalize RunProof |
-| `tool.invoke` | Record a tool invocation |
-| `policy.check` | Check if action is allowed |
-
-### Audit
-
-| Tool | Description |
-|------|-------------|
-| `audit.timeline` | Get audit entries for a run |
-| `verify.run` | Verify a run's integrity |
-
-### Memory
-
-| Tool | Description |
-|------|-------------|
-| `memory.write` | Store a memory with provenance |
-| `memory.search` | Semantic search over memories |
-
-### CIA (Conversation Integrity)
-
-| Tool | Description |
-|------|-------------|
-| `cia.status` | Check CIA proxy health |
-| `cia.report` | Get aggregate stats |
-| `cia.repairs` | List recent repairs |
-| `cia.receipts` | Query receipts by run |
-
-## Claude Desktop Config
+Add to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "substr8": {
       "url": "https://mcp.substr8labs.com",
+      "transport": "sse"
+    }
+  }
+}
+```
+
+### Connect from Code
+
+```python
+import httpx
+
+MCP_URL = "https://mcp.substr8labs.com"
+
+# List available tools
+tools = httpx.get(f"{MCP_URL}/mcp/tools").json()
+
+# Call a tool
+result = httpx.post(f"{MCP_URL}/tools/run/start", json={
+    "project_id": "my-project",
+    "agent_ref": "support-agent"
+}).json()
+```
+
+---
+
+## Available Tools (16)
+
+### Run Lifecycle
+
+#### `substr8.run.start`
+
+Create run context, bind identity, snapshot policy.
+
+```json
+{
+  "project_id": "my-project",
+  "agent_ref": "support-agent",
+  "agent_hash": "sha256:...",
+  "policy_ref": "default",
+  "metadata": {}
+}
+```
+
+#### `substr8.run.end`
+
+Close run and finalize ledger.
+
+```json
+{
+  "run_id": "run-abc123"
+}
+```
+
+---
+
+### Governance
+
+#### `substr8.tool.invoke`
+
+Governed tool gateway: ACC check → DCT log → execute → log result.
+
+```json
+{
+  "run_id": "run-abc123",
+  "tool": "web_search",
+  "args": {"query": "weather today"}
+}
+```
+
+#### `substr8.policy.check`
+
+Check ACC policy for an action.
+
+```json
+{
+  "run_id": "run-abc123",
+  "action": "send_email"
+}
+```
+
+**Response:**
+```json
+{
+  "allowed": true,
+  "reason": "Within policy scope",
+  "policy_id": "email-policy-v2"
+}
+```
+
+---
+
+### Memory
+
+#### `substr8.memory.write`
+
+Write memory with provenance link to ledger entry.
+
+```json
+{
+  "run_id": "run-abc123",
+  "type": "user_preference",
+  "content": "User prefers email",
+  "tags": ["communication", "preference"],
+  "ledger_entry_hash": "sha256:..."
+}
+```
+
+#### `substr8.memory.search`
+
+Search memory with provenance output.
+
+```json
+{
+  "query": "user communication preference"
+}
+```
+
+---
+
+### Audit
+
+#### `substr8.audit.timeline`
+
+Get human-debuggable audit trail for a run.
+
+```json
+{
+  "run_id": "run-abc123"
+}
+```
+
+**Response:**
+```json
+{
+  "run_id": "run-abc123",
+  "events": [
+    {"timestamp": "...", "type": "run.started", "..."},
+    {"timestamp": "...", "type": "tool.called", "..."},
+    {"timestamp": "...", "type": "tool.result", "..."}
+  ]
+}
+```
+
+#### `substr8.verify.run`
+
+Verify chain integrity and provenance links.
+
+```json
+{
+  "run_id": "run-abc123",
+  "check_provenance": true
+}
+```
+
+**Response:**
+```json
+{
+  "verified": true,
+  "event_count": 5,
+  "root_hash": "sha256:..."
+}
+```
+
+---
+
+### CIA (Conversation Integrity)
+
+#### `substr8.cia.status`
+
+CIA status: enabled, mode, version, provider path.
+
+```json
+{
+  "run_id": "run-abc123"
+}
+```
+
+#### `substr8.cia.report`
+
+CIA integrity report: validated, repaired, rejected counts.
+
+```json
+{
+  "run_id": "run-abc123"
+}
+```
+
+#### `substr8.cia.repairs`
+
+Itemized repair list (hashes only, no content).
+
+```json
+{
+  "run_id": "run-abc123",
+  "limit": 100
+}
+```
+
+#### `substr8.cia.receipts`
+
+LLM call receipts (request/response hashes + model).
+
+```json
+{
+  "run_id": "run-abc123",
+  "limit": 100
+}
+```
+
+---
+
+### Agent Identity (TowerHQ)
+
+#### `substr8.agent.register`
+
+Register an agent identity with TowerHQ registry.
+
+```json
+{
+  "name": "support-agent",
+  "version": "1.0.0",
+  "identity_hash": "sha256:abc123...",
+  "manifest_hash": "sha256:def456...",
+  "framework": "langgraph",
+  "publisher_name": "Acme Inc",
+  "publisher_org": "acme"
+}
+```
+
+#### `substr8.agent.verify`
+
+Verify an agent identity hash against the registry.
+
+```json
+{
+  "identity_hash": "sha256:abc123..."
+}
+```
+
+**Response:**
+```json
+{
+  "verified": true,
+  "agent_name": "support-agent",
+  "version": "1.0.0",
+  "status": "active"
+}
+```
+
+#### `substr8.agent.lookup`
+
+Look up agent details by name.
+
+```json
+{
+  "name": "support-agent",
+  "version": "1.0.0"
+}
+```
+
+#### `substr8.agent.list`
+
+List registered agents.
+
+```json
+{
+  "org": "acme",
+  "limit": 50
+}
+```
+
+---
+
+## HTTP Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/mcp/tools` | GET | List all tools |
+| `/tools/run/start` | POST | Start run |
+| `/tools/run/end` | POST | End run |
+| `/tools/agent/register` | POST | Register agent |
+| `/tools/agent/verify` | POST | Verify agent |
+| `/tools/agent/lookup` | POST | Lookup agent |
+| `/tools/agent/list` | POST | List agents |
+| `/tools/memory/write` | POST | Write memory |
+| `/tools/memory/search` | POST | Search memory |
+| `/tools/audit/timeline` | POST | Get timeline |
+| `/tools/verify/run` | POST | Verify run |
+| `/tools/policy/check` | POST | Check policy |
+| `/tools/cia/*` | POST | CIA tools |
+
+---
+
+## Authentication
+
+### Local Mode
+
+No auth required for localhost:
+
+```bash
+curl http://localhost:3456/health
+```
+
+### Production
+
+Use API key:
+
+```bash
+curl -H "Authorization: Bearer sk-..." https://mcp.substr8labs.com/health
+```
+
+---
+
+## Self-Hosting
+
+### Docker
+
+```bash
+docker run -p 3456:3456 substr8/mcp-server
+```
+
+### From Source
+
+```bash
+cd services/mcp-server
+python3 main.py
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_PORT` | 3456 | Server port |
+| `AGENT_REGISTRY_URL` | localhost:8099 | TowerHQ URL |
+| `GAM_URL` | localhost:8091 | Memory URL |
+| `CIA_URL` | localhost:8094 | CIA URL |
+| `ACC_URL` | localhost:8096 | Governance URL |
+| `EVENT_INGEST_URL` | localhost:8100 | Event API URL |
+
+---
+
+## Integration Examples
+
+### Claude Desktop + MCP
+
+```json
+{
+  "mcpServers": {
+    "substr8": {
+      "url": "https://mcp.substr8labs.com",
+      "transport": "sse",
       "headers": {
-        "X-Substr8-Key": "your-api-key"
+        "Authorization": "Bearer sk-..."
       }
     }
   }
 }
 ```
 
-## Authentication
+### LangChain MCP
 
-Cloud MCP requires an API key:
+```python
+from langchain_mcp import MCPToolkit
 
+toolkit = MCPToolkit(server_url="https://mcp.substr8labs.com")
+tools = toolkit.get_tools()
 ```
-X-Substr8-Key: your-api-key
+
+### Direct HTTP
+
+```python
+import httpx
+
+client = httpx.Client(
+    base_url="https://mcp.substr8labs.com",
+    headers={"Authorization": "Bearer sk-..."}
+)
+
+# Start a run
+run = client.post("/tools/run/start", json={
+    "project_id": "my-project",
+    "agent_ref": "my-agent"
+}).json()
+
+# Use the run_id for subsequent calls
+client.post("/tools/memory/write", json={
+    "run_id": run["run_id"],
+    "content": "Important context"
+})
 ```
-
-Local mode auto-generates a key on startup.
-
-## Rate Limits
-
-| Tier | Requests/min |
-|------|--------------|
-| Free | 100 |
-| Pro | 1,000 |
-| Enterprise | 10,000 |
