@@ -1,0 +1,161 @@
+# How RunProof Verification Works
+
+RunProof verification ensures that an AI agent's execution record has not been tampered with.
+
+Substr8 verification checks three things:
+
+1. **The execution trace was not modified**
+2. **The trace represents exactly the events that occurred**
+3. **The proof was created by the expected agent**
+
+---
+
+## Step 1 — Hash Chain Integrity
+
+Each event in a RunProof includes a hash of the previous event.
+
+```
+event_1 → hash
+event_2 → hash(event_1)
+event_3 → hash(event_2)
+```
+
+If any event changes, the chain breaks.
+
+**How it works:**
+
+```
+event_1_hash = sha256(event_1)
+event_2_hash = sha256(event_2 + event_1_hash)
+event_3_hash = sha256(event_3 + event_2_hash)
+```
+
+Verification recomputes this chain and confirms it matches the stored values.
+
+**Result:**
+```
+✓ Hash chain integrity verified
+```
+
+---
+
+## Step 2 — Merkle Root Commitment
+
+The Merkle root is a single cryptographic commitment to all events in the trace.
+
+```
+event_1_hash    event_2_hash    event_3_hash    event_4_hash
+      \            /                  \            /
+       \          /                    \          /
+        hash_1_2                        hash_3_4
+              \                           /
+               \                         /
+                \                       /
+                 \                     /
+                      Merkle Root
+```
+
+Verification recomputes the Merkle tree and checks:
+
+```
+computed_root == stored_root
+```
+
+**Result:**
+```
+✓ Merkle root commitment verified
+```
+
+---
+
+## Step 3 — Ed25519 Signature
+
+This confirms who created the proof.
+
+The RunProof's Merkle root is signed using Ed25519.
+
+Verification checks:
+
+```
+verify(signature, merkle_root, public_key) → true
+```
+
+**Result:**
+```
+✓ Ed25519 signature verified
+```
+
+---
+
+## Final Result
+
+If all three checks succeed:
+
+```
+RunProof: VALID ✓
+```
+
+**CLI output:**
+
+```bash
+substr8 proof verify runproof.json
+```
+
+```
+╭──────────────────────────── Verification Result ─────────────────────────────╮
+│ ✓ RunProof: VALID                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Checks:
+  ✓ hash_chain      — Event order verified
+  ✓ merkle_root     — Event set verified
+  ✓ signature       — Proof origin verified
+```
+
+---
+
+## Why These Checks Matter
+
+| Check | Protects | Prevents |
+|-------|----------|----------|
+| Hash chain | Event order | Reordering or modifying events |
+| Merkle root | Event set | Adding or removing events |
+| Signature | Origin | Forging proofs |
+
+Together these guarantees mean:
+
+- Events cannot be reordered or modified
+- The event set cannot be changed without detection
+- The proof can be traced to its origin
+
+**This makes RunProof a portable, tamper-evident record of agent execution.**
+
+---
+
+## Quick Reference
+
+```
+Hash chain   → protects event order
+Merkle root  → protects event set
+Signature    → proves origin
+```
+
+---
+
+## Try It
+
+```bash
+# Install
+pip install substr8
+
+# Verify any RunProof
+substr8 proof verify runproof.json
+```
+
+---
+
+## Next Steps
+
+- [Your First RunProof](/first-runproof) — Generate and verify
+- [RunProof](/runproof) — Full schema reference
+- [CLI Reference](/cli) — All commands
