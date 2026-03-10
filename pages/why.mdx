@@ -1,0 +1,99 @@
+# Why Substr8 Exists
+
+## The Problem
+
+AI agents can perform work.
+
+But today, we cannot prove what they did.
+
+When an agent:
+- Processes a claim
+- Makes a decision  
+- Calls external tools
+- Generates outputs
+
+There's no verifiable record. Just logs that can be modified, deleted, or faked.
+
+---
+
+## Why This Matters
+
+### For Developers
+
+*"What did my agent actually do?"*
+
+Debugging agents is hard. You need to know exactly what happened, in what order, with what inputs and outputs.
+
+### For Enterprises
+
+*"Can we prove compliance?"*
+
+Regulated industries need audit trails. Today's agent logs don't meet the bar for regulatory evidence.
+
+### For Multi-Agent Systems
+
+*"Can I trust this other agent's work?"*
+
+When agents collaborate, they need to verify each other's outputs. Without proof, it's just blind trust.
+
+---
+
+## The Solution
+
+**Substr8 generates cryptographically verifiable receipts for every agent execution.**
+
+```
+Agent runs
+    ↓
+Substr8 captures every event
+    ↓
+Events form a hash chain
+    ↓
+Chain is Merkle-rooted
+    ↓
+Proof is signed (Ed25519)
+    ↓
+RunProof generated
+```
+
+The result: a **RunProof** — a portable artifact that anyone can verify.
+
+---
+
+## What RunProof Proves
+
+| Question | RunProof Answers |
+|----------|-----------------|
+| What happened? | Complete execution trace |
+| In what order? | Hash chain proves sequence |
+| Is it complete? | Merkle root commits to all events |
+| Who created it? | Cryptographic signature |
+| Was it modified? | Any tampering detected |
+
+---
+
+## The Analogy
+
+| Domain | Receipt |
+|--------|---------|
+| Finance | Invoice |
+| Software | SBOM |
+| Containers | Image digest |
+| Supply chain | Sigstore signature |
+| **AI Agents** | **RunProof** |
+
+---
+
+## One Line
+
+> "Agents with receipts."
+
+---
+
+## Get Started
+
+```bash
+pip install substr8-langgraph
+```
+
+[Quickstart →](/quickstart)

@@ -1,0 +1,187 @@
+# Examples
+
+Learn Substr8 by example. Each recipe demonstrates one capability.
+
+---
+
+## 🚀 Quickstart
+
+### Basic LangGraph Agent
+
+The simplest possible example.
+
+```python
+from langgraph.graph import StateGraph, END
+from substr8_langgraph import instrument_graph
+from typing import TypedDict
+
+class State(TypedDict):
+    message: str
+
+def echo(state):
+    return {"message": f"Echo: {state['message']}"}
+
+# Build graph
+graph = StateGraph(State)
+graph.add_node("echo", echo)
+graph.set_entry_point("echo")
+graph.add_edge("echo", END)
+
+# Instrument
+instrumented = instrument_graph(
+    graph.compile(),
+    agent_id="echo-agent",
+    project="examples"
+)
+
+# Run
+result = instrumented.invoke({"message": "Hello"})
+print(result["proof_status"])  # "verified"
+```
+
+**Time:** 30 seconds
+
+---
+
+## 📋 Recipes
+
+### Save RunProof to File
+
+```python
+import json
+
+result = instrumented.invoke({"query": "..."})
+
+# Extract and save proof
+proof = result["proof"]
+with open("runproof.json", "w") as f:
+    json.dump(proof.model_dump(mode="json"), f, indent=2)
+```
+
+---
+
+### Verify with CLI
+
+```bash
+# Install CLI
+pip install substr8
+
+# Verify proof
+substr8 proof verify runproof.json
+
+# Inspect details
+substr8 proof inspect runproof.json
+```
+
+---
+
+### Verify Programmatically
+
+```python
+from substr8_core import verify_runproof
+import json
+
+with open("runproof.json") as f:
+    proof = json.load(f)
+
+result = verify_runproof(proof)
+
+if result.valid:
+    print("✓ Proof is valid")
+else:
+    print(f"✗ Errors: {result.errors}")
+```
+
+---
+
+### Multi-Node Workflow
+
+```python
+from langgraph.graph import StateGraph, END
+from substr8_langgraph import instrument_graph
+from typing import TypedDict, Annotated
+import operator
+
+class ResearchState(TypedDict):
+    topic: str
+    sources: Annotated[list[str], operator.add]
+    summary: str
+
+def search(state):
+    return {"sources": [f"https://arxiv.org/search/?q={state['topic']}"]}
+
+def analyze(state):
+    return {"sources": [f"Analyzed {len(state['sources'])} sources"]}
+
+def summarize(state):
+    return {"summary": f"Summary of {state['topic']}"}
+
+# Build graph
+graph = StateGraph(ResearchState)
+graph.add_node("search", search)
+graph.add_node("analyze", analyze)
+graph.add_node("summarize", summarize)
+
+graph.set_entry_point("search")
+graph.add_edge("search", "analyze")
+graph.add_edge("analyze", "summarize")
+graph.add_edge("summarize", END)
+
+# Instrument and run
+instrumented = instrument_graph(
+    graph.compile(),
+    agent_id="research-agent",
+    project="examples"
+)
+
+result = instrumented.invoke({
+    "topic": "AI governance",
+    "sources": [],
+    "summary": ""
+})
+
+print(f"Events captured: {len(result['proof'].trace)}")
+```
+
+---
+
+### Check Individual Verification Steps
+
+```python
+from substr8_core import verify_runproof
+
+result = verify_runproof(proof_dict)
+
+# Check individual steps
+print(f"Schema valid: {result.checks.get('schema')}")
+print(f"Hash chain valid: {result.checks.get('hash_chain')}")
+print(f"Merkle root valid: {result.checks.get('merkle_root')}")
+print(f"Signature valid: {result.checks.get('signature')}")
+```
+
+---
+
+## 🎯 Full Demo
+
+Clone and run the complete demo:
+
+```bash
+git clone https://github.com/Substr8-Labs/substr8-langgraph-demo
+cd substr8-langgraph-demo
+pip install -r requirements.txt
+python demo_agent.py
+substr8 proof verify runproof.json
+```
+
+[View on GitHub →](https://github.com/Substr8-Labs/substr8-langgraph-demo)
+
+---
+
+## 📚 Next Steps
+
+| Recipe | Learn |
+|--------|-------|
+| [Quickstart](/quickstart) | First RunProof in 60 seconds |
+| [RunProof](/runproof) | What's inside a proof |
+| [CLI Reference](/cli) | Verification commands |
+| [SDK Reference](/sdk) | Full API |

@@ -1,11 +1,11 @@
 export default {
   index: 'Introduction',
   quickstart: 'Getting Started',
-  sdk: 'SDK Reference',
-  adapters: 'Framework Adapters',
-  "api-reference": 'API Reference',
-  mcp: 'MCP Server',
-  cli: 'CLI Reference',
+  why: 'Why Substr8',
   runproof: 'RunProof',
+  cli: 'CLI Reference',
+  examples: 'Examples',
+  sdk: 'SDK Reference',
+  frameworks: 'Frameworks',
   architecture: 'Architecture'
 }
