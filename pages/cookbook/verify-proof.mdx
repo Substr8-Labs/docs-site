@@ -1,0 +1,91 @@
+# Recipe: Verify an Existing Proof
+
+Verify a RunProof artifact using the CLI or programmatically.
+
+## Using the CLI
+
+### Basic Verification
+
+```bash
+substr8 proof verify runproof.json
+```
+
+### Verbose Output
+
+```bash
+substr8 proof verify runproof.json --verbose
+```
+
+Shows all events in the trace with their hashes.
+
+### JSON Output
+
+```bash
+substr8 proof verify runproof.json --json
+```
+
+Returns machine-readable verification result:
+
+```json
+{
+  "valid": true,
+  "proof_id": "proof_abc123",
+  "checks": {
+    "linear_integrity": true,
+    "set_integrity": true,
+    "signature": true
+  }
+}
+```
+
+## Using Python
+
+```python
+from substr8_core import verify_proof, load_proof
+
+# Load the proof
+proof = load_proof("runproof.json")
+
+# Verify
+result = verify_proof(proof)
+
+if result.valid:
+    print(f"✅ Valid proof: {proof.header.proof_id}")
+    print(f"   Agent: {proof.header.agent_id}")
+    print(f"   Events: {len(proof.trace)}")
+else:
+    print(f"❌ Invalid: {result.error}")
+    for check, passed in result.checks.items():
+        status = "✓" if passed else "✗"
+        print(f"   {status} {check}")
+```
+
+## Using the Web UI
+
+1. Go to [verify.substr8labs.com](https://verify.substr8labs.com)
+2. Upload your `.runproof.json` file or paste the proof hash
+3. View the verification result with timeline visualization
+
+## What Gets Verified?
+
+| Check | What It Proves |
+|-------|---------------|
+| Linear Integrity | Events occurred in recorded order |
+| Set Integrity | No events added/removed/modified |
+| Signature | Proof created by claimed identity |
+
+## Handling Invalid Proofs
+
+```python
+result = verify_proof(proof)
+
+if not result.valid:
+    if not result.checks["linear_integrity"]:
+        print("Hash chain broken - events may be reordered")
+    
+    if not result.checks["set_integrity"]:
+        print("Merkle root mismatch - events may be tampered")
+    
+    if not result.checks["signature"]:
+        print("Signature invalid - proof may be forged")
+```

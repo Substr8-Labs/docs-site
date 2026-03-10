@@ -1,0 +1,87 @@
+# Recipe: Basic LangGraph + RunProof
+
+Generate a RunProof from a simple LangGraph workflow.
+
+## Prerequisites
+
+```bash
+pip install substr8-langgraph langgraph
+```
+
+## Code
+
+```python
+from langgraph.graph import StateGraph, END
+from substr8_langgraph import instrument_graph, RunProofConfig
+
+# Define your state
+class AgentState(dict):
+    messages: list
+
+# Define nodes
+def research_node(state):
+    # Your research logic here
+    return {"messages": state["messages"] + ["Researched topic"]}
+
+def summarize_node(state):
+    # Your summarization logic
+    return {"messages": state["messages"] + ["Summary: ..."]}
+
+# Build the graph
+workflow = StateGraph(AgentState)
+workflow.add_node("research", research_node)
+workflow.add_node("summarize", summarize_node)
+workflow.add_edge("research", "summarize")
+workflow.add_edge("summarize", END)
+workflow.set_entry_point("research")
+
+# Compile
+graph = workflow.compile()
+
+# Instrument with RunProof
+instrumented = instrument_graph(
+    graph,
+    config=RunProofConfig(
+        agent_id="cookbook/research-agent",
+        output_path="./runproof.json"
+    )
+)
+
+# Run it
+result = instrumented.invoke({"messages": ["Research AI governance"]})
+
+print("✅ RunProof generated: ./runproof.json")
+```
+
+## Verify
+
+```bash
+substr8 proof verify runproof.json
+```
+
+## Output
+
+```
+RunProof Verification
+=====================
+Proof ID: proof_abc123
+Agent: cookbook/research-agent
+Runtime: langgraph
+
+Checks:
+  ✓ Linear integrity (hash chain valid)
+  ✓ Set integrity (merkle root matches)
+  ✓ Signature valid
+
+Status: VALID ✅
+```
+
+## What's in the RunProof?
+
+The generated proof contains:
+
+- **Header**: Agent ID, runtime, timestamps, status
+- **Trace**: `run_started` → `node_completed` (research) → `node_completed` (summarize) → `run_completed`
+- **Commitments**: Merkle root + signature
+
+Each event is hash-chained, proving the exact execution sequence.

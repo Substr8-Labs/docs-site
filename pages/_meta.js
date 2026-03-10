@@ -5,6 +5,7 @@ export default {
   runproof: 'RunProof',
   verification: 'How Verification Works',
   spec: 'Specification',
+  cookbook: 'Cookbook',
   examples: 'Examples',
   cli: 'CLI Reference',
   sdk: 'SDK Reference',
