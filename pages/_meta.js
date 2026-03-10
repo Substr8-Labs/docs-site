@@ -1,11 +1,12 @@
 export default {
   index: 'Introduction',
   quickstart: 'Getting Started',
-  why: 'Why Substr8',
+  'first-runproof': 'Your First RunProof',
   runproof: 'RunProof',
-  cli: 'CLI Reference',
   examples: 'Examples',
+  cli: 'CLI Reference',
   sdk: 'SDK Reference',
   frameworks: 'Frameworks',
+  why: 'Why Substr8',
   architecture: 'Architecture'
 }

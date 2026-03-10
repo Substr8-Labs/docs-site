@@ -1,0 +1,143 @@
+# Your First RunProof
+
+Generate and verify your first RunProof in under 60 seconds.
+
+---
+
+## Step 1: Install
+
+```bash
+pip install substr8-langgraph substr8
+```
+
+---
+
+## Step 2: Clone the Demo
+
+```bash
+git clone https://github.com/Substr8-Labs/substr8-langgraph-demo
+cd substr8-langgraph-demo
+```
+
+---
+
+## Step 3: Run the Agent
+
+```bash
+python demo_agent.py
+```
+
+Output:
+```
+🔧 Instrumenting graph with Substr8...
+🚀 Running agent...
+
+📋 Execution Steps:
+   • Searched for: AI agent governance
+   • Analyzed 3 sources
+   • Generated summary
+
+============================================================
+✅ RunProof generated: runproof.json
+
+   Proof ID:  proof_ccfe7c4abd014eab
+   Run ID:    run_ade859b400e24d09
+   Agent:     demo/research-agent
+   Events:    6
+   Status:    verified
+============================================================
+```
+
+---
+
+## Step 4: Verify with CLI
+
+```bash
+substr8 proof verify runproof.json
+```
+
+Output:
+```
+╭──────────────────────────── Verification Result ─────────────────────────────╮
+│ ✓ RunProof: VALID                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  Proof ID   proof_ccfe7c4abd014eab
+  Run ID     run_ade859b400e24d09
+  Agent      demo/research-agent
+
+Checks:
+  ✓ schema
+  ✓ hash_chain
+  ✓ merkle_root
+  ✓ signature
+```
+
+---
+
+## Step 5: Verify in Browser
+
+Upload `runproof.json` to [verify.substr8labs.com](https://verify-ui-gamma.vercel.app)
+
+You'll see:
+- ✅ Verification status
+- 📋 Run details
+- 🔗 Event timeline
+- 🔐 Cryptographic checks
+
+---
+
+## What Just Happened?
+
+```
+Agent executed
+       │
+       ▼
+┌─────────────────────┐
+│  Substr8 captured   │
+│  every event        │
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Events hash-chained │
+│  (tamper-evident)   │
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Merkle root        │
+│  (single commitment)│
+└─────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Ed25519 signature  │
+│  (proof of origin)  │
+└─────────────────────┘
+       │
+       ▼
+   RunProof.json
+       │
+       ├── CLI verification
+       └── Web verification
+```
+
+---
+
+## 🎉 You Did It!
+
+You just:
+1. Ran an AI agent
+2. Generated a cryptographic proof of execution
+3. Verified it locally and in browser
+
+**That's Substr8.** Agents with receipts.
+
+---
+
+## Next Steps
+
+- [RunProof](/runproof) — What's inside the proof
+- [Examples](/examples) — More recipes
+- [CLI Reference](/cli) — All verification commands

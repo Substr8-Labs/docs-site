@@ -2,11 +2,17 @@
 
 Generate cryptographically verifiable receipts for your AI agents in 60 seconds.
 
+**RunProof** = cryptographically verifiable record of an agent execution
+
+---
+
 ## Installation
 
 ```bash
-pip install substr8-langgraph
+pip install substr8-langgraph substr8
 ```
+
+---
 
 ## Quick Start
 
@@ -15,6 +21,7 @@ pip install substr8-langgraph
 ```python
 from langgraph.graph import StateGraph
 from substr8_langgraph import instrument_graph
+import json
 
 # Build your graph normally
 graph = StateGraph(MyState)
@@ -41,18 +48,17 @@ print(f"Run ID: {result['run_id']}")
 print(f"Proof status: {result['proof_status']}")
 ```
 
-### 2. Extract the RunProof
+### 2. Save the RunProof
+
+The proof is in `result["proof"]`. Save it to a file:
 
 ```python
-import json
-
-# Get the proof from the result
-proof = result["proof"]
-
-# Save to file
+# Save proof to runproof.json
 with open("runproof.json", "w") as f:
-    json.dump(proof.model_dump(mode="json"), f, indent=2)
+    json.dump(result["proof"].model_dump(mode="json"), f, indent=2)
 ```
+
+Now you have `runproof.json` — a portable, verifiable receipt.
 
 ### 3. Verify locally (CLI)
 

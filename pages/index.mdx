@@ -17,12 +17,38 @@ AI agents are black boxes. When something goes wrong, you can't prove:
 
 ## The Solution
 
-Wrap your agent with Substr8. Every run produces a **RunProof** — a portable, cryptographically signed receipt containing:
+Wrap your agent workflow with Substr8. Every run produces a **RunProof** — a cryptographically verifiable record of execution.
 
+**RunProof** = cryptographically verifiable record of an agent execution
+
+What's inside:
 - ✓ **Hash-chained trace** — ordered, tamper-evident events
 - ✓ **Merkle root** — single commitment to all events  
 - ✓ **Ed25519 signature** — proof of origin
 - ✓ **Verification** — anyone can check validity
+
+---
+
+## How It Works
+
+```
+Agent Execution
+       │
+       ▼
+Substr8 instrumentation
+       │
+       ▼
+   Event Trace
+       │
+       ▼
+Hash Chain + Merkle Root
+       │
+       ▼
+    RunProof
+       │
+       ├── CLI verification
+       └── verify.substr8labs.com
+```
 
 ---
 
@@ -31,20 +57,30 @@ Wrap your agent with Substr8. Every run produces a **RunProof** — a portable, 
 ```bash
 # Install
 pip install substr8-langgraph
+```
+
+```python
+from substr8_langgraph import instrument_graph
 
 # Wrap your LangGraph
-from substr8_langgraph import instrument_graph
 instrumented = instrument_graph(graph, agent_id="my-agent", project="my-project")
 
-# Run → produces runproof.json
+# Run → proof is in the result
 result = instrumented.invoke(input)
 
+# Save the proof
+import json
+with open("runproof.json", "w") as f:
+    json.dump(result["proof"].model_dump(mode="json"), f)
+```
+
+```bash
 # Verify
 substr8 proof verify runproof.json
 # → ✓ RunProof: VALID
 ```
 
-[Full quickstart →](/quickstart)
+[Your First RunProof →](/first-runproof) — Full walkthrough in 60 seconds
 
 ---
 
@@ -108,7 +144,7 @@ Upload to [verify.substr8labs.com](https://verify-ui-gamma.vercel.app)
 
 ## Getting Started
 
-1. [Quickstart](/quickstart) — 60-second guide
-2. [CLI Reference](/cli) — Verification commands
-3. [RunProof](/runproof) — What's in a proof
-4. [Architecture](/architecture) — How it works
+1. [Your First RunProof](/first-runproof) — 60-second walkthrough
+2. [RunProof](/runproof) — What's in a proof
+3. [CLI Reference](/cli) — Verification commands
+4. [Examples](/examples) — Cookbook recipes
