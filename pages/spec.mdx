@@ -1,0 +1,550 @@
+# RunProof Specification v1
+
+<Callout type="info">
+This is the formal specification for RunProof, the cryptographically verifiable receipt format for AI agent execution.
+</Callout>
+
+## Abstract
+
+RunProof is an open specification for creating verifiable receipts of AI agent execution. A RunProof artifact cryptographically proves:
+
+1. **What happened** — The ordered sequence of events
+2. **Who produced it** — The agent/runtime identity
+3. **That it hasn't been tampered with** — Cryptographic signatures
+
+This specification defines the format, verification rules, and guarantees provided by RunProof.
+
+---
+
+## Status
+
+| Field | Value |
+|-------|-------|
+| **Version** | 2.1 |
+| **Status** | Draft |
+| **Schema URI** | `https://substr8labs.com/schemas/runproof/v2.1` |
+| **Reference Implementation** | [substr8-core](https://github.com/Substr8-Labs/substr8-core) |
+
+---
+
+## 1. Terminology
+
+- **RunProof**: A cryptographically signed artifact representing a single agent execution
+- **Trace**: The ordered sequence of events within an execution
+- **Event**: A single occurrence within the trace (tool call, node completion, etc.)
+- **Hash Chain**: Sequential hashing where each event references the previous hash
+- **Merkle Root**: The root hash of a Merkle tree built from all event hashes
+- **Issuer**: The entity that generated and signed the proof
+
+---
+
+## 2. Four Guarantees
+
+A valid RunProof provides exactly four guarantees:
+
+### 2.1 Event Order Integrity
+
+> Events occurred in the recorded sequence.
+
+Each event contains a `prev_hash` field referencing the hash of the previous event. This creates a hash chain that proves ordering.
+
+```
+Event 1 → Event 2 → Event 3
+   ↓         ↓         ↓
+hash_1 ← prev_hash ← prev_hash
+```
+
+### 2.2 Event Set Integrity
+
+> No events have been added, removed, or modified.
+
+The `event_root` field contains the Merkle root of all event hashes. Any modification to any event changes the root.
+
+### 2.3 Proof Origin Authenticity
+
+> The proof was created by the claimed identity.
+
+The `signature` field contains a cryptographic signature over the `proof_hash`. The signer's public key is included in the `identity` section.
+
+### 2.4 Portable Verification
+
+> Anyone can verify the proof without special access.
+
+All information required for verification is contained within the proof itself. No external services are required for basic verification.
+
+---
+
+## 3. Schema Structure
+
+### 3.1 Top-Level Fields
+
+```json
+{
+  "schema_version": "runproof/v2.1",
+  "header": { ... },
+  "identity": { ... },
+  "claims": { ... },
+  "lineage": { ... },
+  "context": { ... },
+  "trace": [ ... ],
+  "outputs": { ... },
+  "commitments": { ... },
+  "anchors": { ... },
+  "metadata": { ... }
+}
+```
+
+### 3.2 Header
+
+Run metadata and identification.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `proof_id` | string | ✅ | Unique proof identifier |
+| `run_id` | string | ✅ | Execution identifier |
+| `agent_id` | string | ✅ | Agent identifier |
+| `runtime` | string | ✅ | Execution framework |
+| `started_at` | datetime | ✅ | Run start timestamp |
+| `ended_at` | datetime | ❌ | Run end timestamp |
+| `status` | enum | ✅ | `completed`, `failed`, `interrupted` |
+
+### 3.3 Identity
+
+Signer and policy information.
+
+```json
+{
+  "identity": {
+    "signer": {
+      "key_id": "key_xxx",
+      "public_key": "ed25519:...",
+      "issuer": {
+        "name": "substr8",
+        "version": "1.7.2",
+        "runtime": "langgraph"
+      }
+    },
+    "policy": {
+      "capability_profile_id": "cap_xxx",
+      "policy_hash": "sha256:..."
+    }
+  }
+}
+```
+
+### 3.4 Claims (v2.1)
+
+Optional contextual assertions.
+
+```json
+{
+  "claims": {
+    "policy": "trading-agent-policy-v3",
+    "model": "gpt-4.1",
+    "environment": "prod-us-east",
+    "compliance": ["sox-compliant", "pci-dss"],
+    "intent_hash": "sha256:...",
+    "custom": {}
+  }
+}
+```
+
+<Callout type="warning">
+Claims are assertions by the issuer — they are NOT cryptographically verified by the proof itself. External systems MAY verify claims against their own records.
+</Callout>
+
+### 3.5 Lineage (v2.1)
+
+Chainable proof relationships.
+
+```json
+{
+  "lineage": {
+    "parent": "sha256:abc123...",
+    "root": "sha256:def456...",
+    "depth": 3,
+    "workflow_id": "wf_content_pipeline_001"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `parent` | string | SHA256 hash of parent RunProof |
+| `root` | string | SHA256 hash of workflow root |
+| `depth` | integer | Steps from root (1 = is root) |
+| `workflow_id` | string | Workflow grouping identifier |
+
+### 3.6 Trace
+
+The execution trace is an array of ordered events.
+
+```json
+{
+  "trace": [
+    {
+      "seq": 1,
+      "event_id": "evt_xxx",
+      "type": "run_started",
+      "timestamp": "2026-03-11T08:00:00Z",
+      "prev_hash": null,
+      "payload_hash": "sha256:...",
+      "payload": { "agent_id": "..." },
+      "entry_hash": "sha256:..."
+    }
+  ]
+}
+```
+
+#### Event Types
+
+| Type | Description |
+|------|-------------|
+| `run_started` | Execution began |
+| `run_completed` | Execution finished successfully |
+| `run_failed` | Execution failed |
+| `node_started` | Graph node began |
+| `node_completed` | Graph node finished |
+| `tool_call_started` | Tool invocation began |
+| `tool_call_completed` | Tool returned result |
+| `decision_made` | Routing/branching decision |
+| `human_review_requested` | Paused for human input |
+| `custom` | Framework-specific event |
+
+### 3.7 Commitments
+
+Cryptographic integrity data.
+
+```json
+{
+  "commitments": {
+    "event_root": "sha256:...",
+    "proof_hash": "sha256:...",
+    "signature": {
+      "algorithm": "ed25519",
+      "value": "base64:..."
+    }
+  }
+}
+```
+
+---
+
+## 4. Verification Algorithm
+
+To verify a RunProof:
+
+### Step 1: Linear Integrity (Hash Chain)
+
+```python
+for i, event in enumerate(proof.trace):
+    if i == 0:
+        assert event.prev_hash is None
+    else:
+        assert event.prev_hash == proof.trace[i-1].entry_hash
+```
+
+### Step 2: Set Integrity (Merkle Root)
+
+```python
+hashes = [event.entry_hash for event in proof.trace]
+computed_root = compute_merkle_root(hashes)
+assert computed_root == proof.commitments.event_root
+```
+
+### Step 3: Authenticity (Signature)
+
+```python
+public_key = parse_public_key(proof.identity.signer.public_key)
+message = proof.commitments.proof_hash
+signature = decode_base64(proof.commitments.signature.value)
+assert verify_signature(public_key, message, signature)
+```
+
+### Step 4: Lineage Validation (Optional)
+
+If `lineage.parent` is set:
+
+```python
+if proof.lineage and proof.lineage.parent:
+    parent_proof = fetch_proof(proof.lineage.parent)
+    assert parent_proof is not None
+    # Optionally: verify parent is valid
+```
+
+---
+
+## 5. Hash Computation
+
+### 5.1 Event Entry Hash
+
+```python
+def compute_entry_hash(event):
+    canonical = json.dumps({
+        "seq": event.seq,
+        "event_id": event.event_id,
+        "type": event.type,
+        "timestamp": event.timestamp.isoformat(),
+        "prev_hash": event.prev_hash,
+        "payload_hash": event.payload_hash
+    }, sort_keys=True, separators=(',', ':'))
+    return "sha256:" + sha256(canonical.encode()).hexdigest()
+```
+
+### 5.2 Merkle Root
+
+```python
+def compute_merkle_root(hashes):
+    if len(hashes) == 0:
+        return "sha256:" + sha256(b"").hexdigest()
+    if len(hashes) == 1:
+        return hashes[0]
+    
+    # Pad to even length
+    if len(hashes) % 2 == 1:
+        hashes.append(hashes[-1])
+    
+    # Build tree
+    while len(hashes) > 1:
+        next_level = []
+        for i in range(0, len(hashes), 2):
+            combined = hashes[i] + hashes[i+1]
+            next_level.append("sha256:" + sha256(combined.encode()).hexdigest())
+        hashes = next_level
+    
+    return hashes[0]
+```
+
+### 5.3 Proof Hash
+
+```python
+def compute_proof_hash(proof):
+    # Exclude signature from hash computation
+    canonical = json.dumps({
+        "schema_version": proof.schema_version,
+        "header": proof.header.dict(),
+        "identity": proof.identity.dict(),
+        "claims": proof.claims.dict() if proof.claims else None,
+        "lineage": proof.lineage.dict() if proof.lineage else None,
+        "context": proof.context.dict(),
+        "outputs": proof.outputs.dict(),
+        "event_root": proof.commitments.event_root,
+        "anchors": proof.anchors.dict(),
+        "metadata": proof.metadata.dict()
+    }, sort_keys=True, separators=(',', ':'))
+    return "sha256:" + sha256(canonical.encode()).hexdigest()
+```
+
+---
+
+## 6. Signature Algorithms
+
+| Algorithm | Key Format | Signature Format |
+|-----------|------------|------------------|
+| `ed25519` | `ed25519:<hex>` | Base64 |
+| `ecdsa-p256` | `ecdsa-p256:<hex>` | Base64 (DER) |
+
+---
+
+## 7. Extensibility
+
+### 7.1 Custom Event Types
+
+Frameworks MAY define custom event types using `type: "custom"` with a `payload.event_type` field:
+
+```json
+{
+  "type": "custom",
+  "payload": {
+    "event_type": "langgraph.conditional_edge",
+    "edge_name": "should_continue"
+  }
+}
+```
+
+### 7.2 Custom Claims
+
+The `claims.custom` field accepts arbitrary key-value pairs:
+
+```json
+{
+  "claims": {
+    "custom": {
+      "department": "engineering",
+      "cost_center": "CC-4521",
+      "request_id": "req_xxx"
+    }
+  }
+}
+```
+
+### 7.3 Future Reserved Fields
+
+The following fields are reserved for future specification versions:
+
+- `attestations[]` — Third-party verification signatures
+- `segments[]` — Segmented Merkle trees for large traces
+- `intent` — Full Intent primitive integration
+- `acceptance` — Acceptance primitive integration
+
+---
+
+## 8. Implementations
+
+### Reference Implementation
+
+- **Language**: Python 3.10+
+- **Package**: `substr8-core`
+- **Repository**: [github.com/Substr8-Labs/substr8-core](https://github.com/Substr8-Labs/substr8-core)
+
+### CLI
+
+- **Package**: `substr8`
+- **Commands**: `proof verify`, `proof inspect`
+
+### Verification UI
+
+- **URL**: [verify.substr8labs.com](https://verify.substr8labs.com)
+
+---
+
+## 9. Security Considerations
+
+### 9.1 Key Management
+
+Implementations SHOULD:
+- Generate ephemeral keys per-run for isolation
+- Support external key management systems
+- Rotate keys regularly
+
+### 9.2 Replay Protection
+
+The `proof_id` and `run_id` fields provide uniqueness. Implementations SHOULD reject duplicate proof submissions to registries.
+
+### 9.3 Time Verification
+
+Timestamps are self-reported by the issuer. For high-assurance use cases, implementations SHOULD anchor proofs to external timestamping services.
+
+---
+
+## 10. IANA Considerations
+
+This specification does not require any IANA registrations.
+
+---
+
+## 11. References
+
+- [RFC 8032](https://tools.ietf.org/html/rfc8032) — Edwards-Curve Digital Signature Algorithm (EdDSA)
+- [RFC 8259](https://tools.ietf.org/html/rfc8259) — The JavaScript Object Notation (JSON) Data Interchange Format
+- [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/) — Observability framework
+
+---
+
+## Appendix A: Full Example
+
+```json
+{
+  "schema_version": "runproof/v2.1",
+  "header": {
+    "proof_id": "proof_ccfe7c4abd014eab",
+    "run_id": "run_ade859b400e24d09",
+    "agent_id": "research/web-researcher",
+    "runtime": "langgraph",
+    "runtime_version": "0.2.99",
+    "started_at": "2026-03-11T08:00:00Z",
+    "ended_at": "2026-03-11T08:00:05Z",
+    "status": "completed"
+  },
+  "identity": {
+    "signer": {
+      "key_id": "key_ephemeral_001",
+      "public_key": "ed25519:09f2cb092ea8af1c...",
+      "issuer": {
+        "name": "substr8",
+        "version": "1.7.2",
+        "runtime": "langgraph",
+        "runtime_version": "0.2.99"
+      }
+    }
+  },
+  "claims": {
+    "policy": "research-agent-policy-v1",
+    "model": "claude-3.5-sonnet",
+    "environment": "production"
+  },
+  "lineage": {
+    "depth": 1
+  },
+  "context": {
+    "trigger_type": "api",
+    "input_hash": "sha256:44136fa355b3678a...",
+    "model": {
+      "provider": "anthropic",
+      "model_id": "claude-3.5-sonnet"
+    },
+    "tools_available": ["web_search", "read_url"]
+  },
+  "trace": [
+    {
+      "seq": 1,
+      "event_id": "evt_001",
+      "type": "run_started",
+      "timestamp": "2026-03-11T08:00:00Z",
+      "prev_hash": null,
+      "payload_hash": "sha256:32369c6fb02a87a7...",
+      "entry_hash": "sha256:559fe8cee19b9f11..."
+    },
+    {
+      "seq": 2,
+      "event_id": "evt_002",
+      "type": "tool_call_completed",
+      "timestamp": "2026-03-11T08:00:02Z",
+      "prev_hash": "sha256:559fe8cee19b9f11...",
+      "payload_hash": "sha256:81da3e81ebd668c8...",
+      "payload": {
+        "tool": "web_search",
+        "result_hash": "sha256:abc123..."
+      },
+      "entry_hash": "sha256:a0facd669dc2461d..."
+    },
+    {
+      "seq": 3,
+      "event_id": "evt_003",
+      "type": "run_completed",
+      "timestamp": "2026-03-11T08:00:05Z",
+      "prev_hash": "sha256:a0facd669dc2461d...",
+      "payload_hash": "sha256:d0765f73cd5d1df3...",
+      "entry_hash": "sha256:113c59eb2ed53352..."
+    }
+  ],
+  "outputs": {
+    "result_hash": "sha256:50ac1f82766b184e...",
+    "result_redaction_mode": "hashed"
+  },
+  "commitments": {
+    "event_root": "sha256:ba56701f663b204d...",
+    "proof_hash": "sha256:a65b14e11a1a96a4...",
+    "signature": {
+      "algorithm": "ed25519",
+      "value": "/i4PA/caaCadEtQt..."
+    }
+  },
+  "anchors": {},
+  "metadata": {
+    "tags": ["research", "web"],
+    "custom": {
+      "sdk_version": "substr8-langgraph/0.1.0"
+    }
+  }
+}
+```
+
+---
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v2.1 | 2026-03-11 | Added claims, lineage, expanded issuer |
+| v2.0 | 2026-03-09 | Initial release |

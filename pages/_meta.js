@@ -4,6 +4,7 @@ export default {
   'first-runproof': 'Your First RunProof',
   runproof: 'RunProof',
   verification: 'How Verification Works',
+  spec: 'Specification',
   examples: 'Examples',
   cli: 'CLI Reference',
   sdk: 'SDK Reference',
