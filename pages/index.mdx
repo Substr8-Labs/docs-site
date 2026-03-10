@@ -1,156 +1,114 @@
 # Substr8
 
-**Agent Trust Infrastructure**
+**Agents with receipts.**
 
-> Substr8 turns agent execution into a verifiable, governed, delegable, and auditable workflow.
+Substr8 generates cryptographically verifiable receipts for AI agent execution.
 
-Frameworks build agents. **Substr8 proves what they did.**
+---
 
-```
-Define → Hash → Register → Execute → Enforce → Delegate → Attest → Verify
-```
+## The Problem
+
+AI agents are black boxes. When something goes wrong, you can't prove:
+- What the agent actually did
+- Whether it followed policy
+- If the logs were tampered with
+
+---
+
+## The Solution
+
+Wrap your agent with Substr8. Every run produces a **RunProof** — a portable, cryptographically signed receipt containing:
+
+- ✓ **Hash-chained trace** — ordered, tamper-evident events
+- ✓ **Merkle root** — single commitment to all events  
+- ✓ **Ed25519 signature** — proof of origin
+- ✓ **Verification** — anyone can check validity
 
 ---
 
 ## Quick Start
 
 ```bash
-pip install substr8
+# Install
+pip install substr8-langgraph
+
+# Wrap your LangGraph
+from substr8_langgraph import instrument_graph
+instrumented = instrument_graph(graph, agent_id="my-agent", project="my-project")
+
+# Run → produces runproof.json
+result = instrumented.invoke(input)
+
+# Verify
+substr8 proof verify runproof.json
+# → ✓ RunProof: VALID
 ```
 
-```python
-from substr8 import Substr8Client
-
-client = Substr8Client()
-
-# Start tracking
-run = client.run_start(agent_id="my-agent")
-
-# Emit events
-client.run_event("tool.called", {"tool": "search"})
-
-# End and verify
-client.run_end()
-client.verify_run(run.run_id)  # {"verified": True}
-```
-
-**[Get started in 5 minutes →](/getting-started)**
+[Full quickstart →](/quickstart)
 
 ---
 
-## Framework Adapters
+## Verification
 
-One line to add observability:
+### CLI
 
-```python
-# OpenAI
-from substr8.adapters.openai import wrap_openai
-client = wrap_openai(OpenAI())
+```bash
+substr8 proof verify runproof.json
 
-# Anthropic
-from substr8.adapters.anthropic import wrap_anthropic
-client = wrap_anthropic(Anthropic())
-
-# LangGraph
-from substr8.adapters.langgraph import create_callback
-graph.invoke(state, config={"callbacks": [create_callback()]})
-
-# CrewAI
-from substr8.adapters.crewai import wrap_crew
-wrap_crew(crew).kickoff()
+# Output:
+# ✓ RunProof: VALID
+# Checks: schema ✓ hash_chain ✓ merkle_root ✓ signature ✓
 ```
 
-**[View all adapters →](/adapters)**
+### Web
+
+Upload to [verify.substr8labs.com](https://verify-ui-gamma.vercel.app)
 
 ---
 
 ## Why Substr8?
 
-AI agents have a trust problem. When an agent says "I searched the web and wrote the memory" — did it actually?
-
-Most systems rely on logs. **Substr8 produces cryptographic receipts.**
-
-| Logs | Substr8 |
-|------|---------|
-| Can be modified | Immutable hash chain |
-| Trust the system | Verify independently |
-| "It happened" | "Here's proof" |
+| Before | After |
+|--------|-------|
+| "The agent ran" | "Here's the cryptographic proof" |
+| Trust the logs | Verify the proof |
+| Hope nothing changed | Detect any tampering |
 
 ---
 
-## Core Concepts
+## Use Cases
 
-### RunProof
-
-A portable, cryptographically verifiable artifact for every governed run.
-
-**[Learn more →](/runproof)**
-
-### TowerHQ
-
-Agent identity registry. Define agents, compute identity hashes, verify authenticity.
-
-### ThreadHQ
-
-Execution observability. Track every prompt, response, tool call, and decision.
-
-### Governance
-
-Policy enforcement. Check capabilities before actions, audit everything.
+- **Audit trails** — Prove what happened to regulators
+- **Debugging** — Replay exactly what occurred
+- **Compliance** — Attach proofs to reports
+- **Multi-agent** — Verify work between agents
+- **CI/CD** — Gate deployments on verification
 
 ---
 
-## The 10 SDK Functions
+## Comparison
 
-| Function | Purpose |
-|----------|---------|
-| `agent_register` | Register agent in TowerHQ |
-| `agent_hash` | Compute identity hash |
-| `agent_verify` | Verify agent identity |
-| `run_start` | Start execution run |
-| `run_event` | Emit trust event |
-| `run_end` | End run |
-| `capability_check` | Check policy |
-| `memory_write` | Write to memory |
-| `memory_search` | Search memory |
-| `verify_run` | Verify hash chain |
-
-**[Full SDK reference →](/sdk)**
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│            Your Agent Code              │
-├─────────────────────────────────────────┤
-│         Substr8 SDK / Adapters          │
-├─────────────────────────────────────────┤
-│  TowerHQ  │  ThreadHQ  │  Governance    │
-│  Identity │  Execution │  Policies      │
-├─────────────────────────────────────────┤
-│              Trust Plane                │
-│    Events → Hash Chain → RunProof       │
-└─────────────────────────────────────────┘
-```
+| Technology | Verifies |
+|------------|----------|
+| Docker | Container images |
+| SBOM | Software contents |
+| Sigstore | Software supply chain |
+| **Substr8** | **AI agent execution** |
 
 ---
 
 ## Links
 
-- [GitHub](https://github.com/Substr8-Labs/substr8-cli)
+- [GitHub](https://github.com/Substr8-Labs)
 - [PyPI](https://pypi.org/project/substr8/)
-- [MCP Server](https://mcp.substr8labs.com)
-- [Verify RunProof](https://verify.substr8labs.com)
+- [Demo Repo](https://github.com/Substr8-Labs/substr8-langgraph-demo)
+- [Verify UI](https://verify-ui-gamma.vercel.app)
 
 ---
 
-## Documentation
+## Getting Started
 
-- [Getting Started](/getting-started) — 5-minute quickstart
-- [SDK Reference](/sdk) — All 10 functions
-- [Adapters](/adapters) — Framework integrations
-- [API Reference](/api) — REST endpoints
-- [RunProof](/runproof) — Verification artifacts
-- [CLI Reference](/cli) — Command-line tools
+1. [Quickstart](/quickstart) — 60-second guide
+2. [CLI Reference](/cli) — Verification commands
+3. [RunProof](/runproof) — What's in a proof
+4. [Architecture](/architecture) — How it works

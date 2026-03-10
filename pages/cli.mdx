@@ -6,152 +6,207 @@
 pip install substr8
 ```
 
-## Commands
+Current version: **1.7.2**
 
-### `substr8 init`
+---
 
-Scaffold a new project with framework examples.
+## Core Commands
 
-```bash
-substr8 init [path] [options]
-```
+### `substr8 proof verify`
 
-**Options:**
-- `--framework` — `all`, `langgraph`, `pydantic-ai`, `autogen` (default: `all`)
-- `--api-key` — Pre-fill API key in .env
-- `--minimal` — Create minimal structure
-
-### `substr8 run`
-
-Run an agent with governance enabled.
+Verify a RunProof v2 JSON file.
 
 ```bash
-substr8 run <script> [options]
+substr8 proof verify <file>
 ```
 
-**Options:**
-- `--framework` — Force framework detection (`auto`, `langgraph`, `pydantic-ai`, `autogen`)
-- `--local` / `--cloud` — Use local or cloud MCP (default: `--cloud`)
-- `--out` — Output directory for RunProof (default: `./runproofs`)
-- `--mcp-url` — Custom MCP server URL
-- `--no-tarball` — Don't create .runproof.tgz archive
-- `--label` — Add labels in `k=v` format (can repeat)
-
-**Examples:**
+**Example:**
 ```bash
-# Basic run
-substr8 run agent.py
-
-# Force framework
-substr8 run agent.py --framework langgraph
-
-# Local MCP server
-substr8 run agent.py --local
-
-# Custom output
-substr8 run agent.py --out ./proofs --label env=prod
+substr8 proof verify runproof.json
 ```
 
-### `substr8 verify`
+**Output:**
+```
+╭──────────────────────────── Verification Result ─────────────────────────────╮
+│ ✓ RunProof: VALID                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
 
-Verify a RunProof bundle offline.
+  Proof ID   proof_ccfe7c4abd014eab
+  Run ID     run_ade859b400e24d09
+  Agent      demo/research-agent
 
-```bash
-substr8 verify <path> [options]
+Checks:
+  ✓ schema
+  ✓ hash_chain
+  ✓ merkle_root
+  ✓ signature
 ```
 
-**Options:**
-- `--json` — Output as JSON
-- `--strict` — Also verify signature
+**Verification checks:**
+- `schema` — Valid RunProof v2 structure
+- `hash_chain` — Events form valid hash chain
+- `merkle_root` — Merkle root matches events
+- `signature` — Ed25519 signature valid
 
-**Exit codes:**
-- `0` — Valid
-- `40` — Root hash mismatch
-- `41` — Ledger chain invalid
-- `42` — CIA validation failed
-- `43` — GAM validation failed
-- `44` — Signature invalid
+---
 
-### `substr8 mcp`
+### `substr8 proof inspect`
 
-MCP server commands.
+Inspect RunProof v2 details without verification.
 
 ```bash
-# Start local MCP server
-substr8 mcp start --local
-
-# Start with auth required
-substr8 mcp start --local --require-auth
-
-# Custom port
-substr8 mcp start --local --port 9988
+substr8 proof inspect <file>
 ```
 
-### `substr8 connect`
+**Output:**
+```
+╭─────────────────────────── proof_ccfe7c4abd014eab ───────────────────────────╮
+│ ✓ RunProof                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
 
-Connect to a local MCP server (for IDEs and tools).
+            Proof Details
+╭─────────┬─────────────────────────╮
+│ Field   │ Value                   │
+├─────────┼─────────────────────────┤
+│ Run ID  │ run_ade859b400e24d09    │
+│ Agent   │ demo/research-agent     │
+│ Runtime │ langgraph               │
+│ Status  │ completed               │
+│ Events  │ 6                       │
+│ Started │ 2026-03-10 08:10:33 UTC │
+│ Ended   │ 2026-03-10 08:10:33 UTC │
+╰─────────┴─────────────────────────╯
 
-```bash
-# Connect to default local server
-substr8 connect
-
-# Connect with custom URL
-substr8 connect --url http://localhost:9988
+                      Cryptographic Commitments
+╭────────────┬───────────────────────────────────────────────────────╮
+│ Field      │ Value                                                 │
+├────────────┼───────────────────────────────────────────────────────┤
+│ Event Root │ sha256:ba56701f663b204dccafc93968d34207de6b909dd7f... │
+│ Proof Hash │ sha256:a65b14e11a1a96a436e3adcc129813c10538d50f1e6... │
+│ Algorithm  │ ed25519                                               │
+│ Public Key │ ed25519:09f2cb092ea8af1c94689b6cda0f80fe...           │
+╰────────────┴───────────────────────────────────────────────────────╯
 ```
 
-The connection is persisted in `~/.substr8/config.json`.
-
-### `substr8 disconnect`
-
-Disconnect from the current MCP server.
-
-```bash
-substr8 disconnect
-```
-
-### `substr8 status`
-
-Show current connection and governance status.
-
-```bash
-substr8 status
-```
-
-Output:
-```
-Substr8 Status
-━━━━━━━━━━━━━━
-MCP:     connected (local @ localhost:9988)
-Mode:    governance enabled
-Runs:    12 total, 3 active
-Version: 1.5.0
-```
+---
 
 ### `substr8 info`
 
-Show platform information.
+Show platform information and available modules.
 
 ```bash
 substr8 info
 ```
 
-### `substr8 badge`
+**Output:**
+```
+  Verifiable AI Infrastructure
 
-Generate README badge for a run.
+                            Components
+╭──────────┬────────────┬─────────────────────────────────────────╮
+│ Module   │ Status     │ Description                             │
+├──────────┼────────────┼─────────────────────────────────────────┤
+│ fdaa     │ ✓ ready    │ File-Driven Agent Architecture          │
+│ gam      │ ✓ ready    │ Git-Native Agent Memory                 │
+│ acc      │ ✓ ready    │ Agent Capability Control                │
+│ dct      │ ✓ ready    │ Deterministic Capability Tokens         │
+│ ril      │ ✓ ready    │ Runtime Integrity Layer                 │
+│ mcp      │ ✓ ready    │ MCP Server - Universal framework bridge │
+│ gateway  │ ✓ ready    │ Docker Swarm orchestration              │
+╰──────────┴────────────┴─────────────────────────────────────────╯
+```
+
+---
+
+### `substr8 status`
+
+Show connection and governance status.
 
 ```bash
-substr8 badge <run-id>
+substr8 status
 ```
 
-Output:
-```markdown
-[![Verified by Substr8](https://verify.substr8labs.com/badge/run-6c39af.svg)](https://verify.substr8labs.com/run/run-6c39af)
+---
+
+## Advanced Command Groups
+
+The CLI includes additional command groups for power users:
+
+| Group | Description |
+|-------|-------------|
+| `substr8 gam` | Git-Native Agent Memory |
+| `substr8 fdaa` | File-Driven Agent Architecture |
+| `substr8 acc` | Agent Capability Control |
+| `substr8 dct` | Deterministic Capability Tokens |
+| `substr8 ril` | Runtime Integrity Layer |
+| `substr8 mcp` | MCP Server commands |
+| `substr8 registry` | Run Registry queries |
+| `substr8 gateway` | Docker Swarm orchestration |
+| `substr8 dev` | Developer scaffolding |
+
+Use `--help` on any group for details:
+
+```bash
+substr8 gam --help
+substr8 fdaa --help
 ```
+
+---
+
+## GAM Commands
+
+Git-Native Agent Memory for semantic memory operations.
+
+```bash
+# Initialize GAM in current repo
+substr8 gam init
+
+# Store a memory
+substr8 gam remember "User prefers dark mode" --tags ui,preference
+
+# Search memories
+substr8 gam recall "user preferences"
+
+# Show GAM status
+substr8 gam status
+```
+
+---
+
+## FDAA Commands
+
+File-Driven Agent Architecture for agent workspaces.
+
+```bash
+# Create a new agent workspace
+substr8 fdaa init my-agent
+
+# Start a chat session
+substr8 fdaa chat my-agent
+
+# Verify agent matches registered hash
+substr8 fdaa verify my-agent
+```
+
+---
+
+## MCP Commands
+
+Start and manage MCP servers for framework integration.
+
+```bash
+# Start local MCP server
+substr8 mcp start
+
+# Start with custom port
+substr8 mcp start --port 9988
+```
+
+---
 
 ## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
 | `SUBSTR8_MCP_URL` | Default MCP server URL |
-| `SUBSTR8_RUN_ID` | Override run ID |
-| `SUBSTR8_AGENT_ID` | Agent identifier for GAM |
+| `SUBSTR8_API_KEY` | API key for cloud access |

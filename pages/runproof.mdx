@@ -1,59 +1,207 @@
 # RunProof
 
-A **RunProof** is a portable, cryptographically verifiable artifact produced for every governed agent run.
+A **RunProof** is a cryptographically verifiable receipt for an AI agent execution.
 
-## What It Contains
-
-```
-runproof/
-  run.json              # Run metadata
-  agent/
-    fdaa.manifest.json  # Agent identity hash
-  policy/
-    acc.policy.json     # Policy that was enforced
-  ledger/
-    dct.ledger.jsonl    # Tamper-evident audit trail
-  cia/
-    cia.receipts.jsonl  # Request integrity receipts
-  memory/
-    gam.pointers.jsonl  # Memory operation pointers
-  RUNPROOF.sha256       # Root hash
-```
+---
 
 ## What It Proves
 
-| Component | Proves |
-|-----------|--------|
-| `fdaa.manifest.json` | Which agent ran (hash of agent definition) |
-| `acc.policy.json` | What policy was enforced |
-| `dct.ledger.jsonl` | What actions occurred (audit trail) |
-| `cia.receipts.jsonl` | That requests weren't tampered with |
-| `gam.pointers.jsonl` | What memory operations happened |
-| `RUNPROOF.sha256` | That none of the above was modified |
+| Question | RunProof answers |
+|----------|-----------------|
+| What happened? | Complete execution trace |
+| In what order? | Hash-chained event sequence |
+| Is it complete? | Merkle root commitment |
+| Who created it? | Ed25519 signature |
+| Was it modified? | Any tampering detected |
+
+---
+
+## Schema (v2)
+
+A RunProof is a single JSON file:
+
+```json
+{
+  "schema_version": "runproof/v2",
+  "header": {
+    "proof_id": "proof_abc123...",
+    "run_id": "run_xyz789...",
+    "agent_id": "my-agent",
+    "project": "my-project",
+    "runtime": "langgraph",
+    "started_at": "2026-03-10T08:10:33.000Z",
+    "ended_at": "2026-03-10T08:10:35.000Z",
+    "status": "completed"
+  },
+  "trace": [
+    {
+      "type": "run_started",
+      "timestamp": "2026-03-10T08:10:33.000Z",
+      "entry_hash": "sha256:...",
+      "prev_hash": null
+    },
+    {
+      "type": "node_started",
+      "node": "search",
+      "timestamp": "2026-03-10T08:10:33.100Z",
+      "entry_hash": "sha256:...",
+      "prev_hash": "sha256:..."
+    }
+  ],
+  "commitments": {
+    "event_root": "sha256:...",
+    "proof_hash": "sha256:...",
+    "signature": {
+      "algorithm": "ed25519",
+      "public_key": "ed25519:...",
+      "value": "..."
+    }
+  },
+  "outputs": {
+    "summary": "...",
+    "sources": ["..."]
+  }
+}
+```
+
+---
+
+## Components
+
+### Header
+
+Metadata about the run:
+
+| Field | Description |
+|-------|-------------|
+| `proof_id` | Unique identifier for this proof |
+| `run_id` | Unique identifier for the execution |
+| `agent_id` | Which agent ran |
+| `project` | Project/organization |
+| `runtime` | Framework used (langgraph, autogen, etc.) |
+| `started_at` | When execution began |
+| `ended_at` | When execution finished |
+| `status` | `completed`, `failed`, or `running` |
+
+### Trace
+
+Ordered list of events. Each event:
+
+| Field | Description |
+|-------|-------------|
+| `type` | Event type (`run_started`, `node_started`, etc.) |
+| `timestamp` | When it occurred |
+| `entry_hash` | SHA256 of this event |
+| `prev_hash` | Hash of previous event (chain) |
+| `...` | Event-specific data |
+
+**Event types:**
+- `run_started` — Execution begins
+- `run_ended` — Execution completes
+- `node_started` — Graph node begins
+- `node_ended` — Graph node completes
+- `tool_called` — Tool invocation
+- `tool_result` — Tool result
+- `decision` — Decision recorded
+- `memory_op` — Memory operation
+
+### Commitments
+
+Cryptographic proofs:
+
+| Field | Description |
+|-------|-------------|
+| `event_root` | Merkle root of all events |
+| `proof_hash` | Hash of entire proof |
+| `signature` | Ed25519 signature of proof_hash |
+
+### Outputs
+
+The final outputs of the run (hashed for verification).
+
+---
+
+## Hash Chain
+
+Events form a chain where each event includes the hash of the previous:
+
+```
+Event 1: hash(data₁, null)        → H₁
+Event 2: hash(data₂, H₁)          → H₂
+Event 3: hash(data₃, H₂)          → H₃
+```
+
+This ensures:
+- **Order is fixed** — can't reorder events
+- **Completeness** — can't remove events
+- **Tamper evidence** — any change breaks the chain
+
+---
+
+## Merkle Root
+
+All event hashes are combined into a Merkle tree:
+
+```
+        Root
+       /    \
+      H₁₂    H₃₄
+     /  \   /  \
+    H₁  H₂ H₃  H₄
+```
+
+The root is a single hash committing to all events.
+
+---
+
+## Signature
+
+The `proof_hash` (hash of entire proof) is signed with Ed25519:
+
+```
+signature = sign(proof_hash, private_key)
+```
+
+Verification:
+```
+verify(signature, proof_hash, public_key) → true/false
+```
+
+---
 
 ## Verification
 
-### Local Verification
+### CLI
 
 ```bash
-substr8 verify runproof.tgz
+substr8 proof verify runproof.json
 ```
 
-No network required. Verifies:
-1. Root hash matches contents
-2. DCT ledger chain is valid
-3. CIA receipts link to ledger
-4. GAM pointers link to ledger
-5. FDAA agent hash matches
+Checks:
+1. ✓ Schema valid
+2. ✓ Hash chain valid
+3. ✓ Merkle root matches
+4. ✓ Signature valid
 
-### Online Verification
+### Web
 
-Upload to [verify.substr8labs.com](https://verify.substr8labs.com) or use the API:
+Upload to [verify.substr8labs.com](https://verify-ui-gamma.vercel.app)
 
-```bash
-curl -X POST https://verify.substr8labs.com/api/verify \
-  -F "runproof=@runproof.tgz"
+### Programmatic
+
+```python
+from substr8_core import verify_runproof
+import json
+
+with open("runproof.json") as f:
+    proof = json.load(f)
+
+result = verify_runproof(proof)
+print(f"Valid: {result.valid}")
+print(f"Errors: {result.errors}")
 ```
+
+---
 
 ## Comparison
 
@@ -62,11 +210,20 @@ curl -X POST https://verify.substr8labs.com/api/verify \
 | Docker | Container image integrity |
 | SBOM | Software bill of materials |
 | Sigstore | Software supply chain |
-| **RunProof** | **AI agent run integrity** |
+| **RunProof** | **AI agent execution integrity** |
+
+---
 
 ## Use Cases
 
 - **Audit trails** — Prove what an agent did to regulators
-- **CI/CD gates** — Block deployment if verification fails
 - **Debugging** — Replay exactly what happened
 - **Compliance** — Attach to reports, PRs, tickets
+- **Multi-agent** — Verify work between agents
+- **CI/CD gates** — Block if verification fails
+
+---
+
+## Tagline
+
+> "Agents with receipts."

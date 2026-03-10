@@ -1,133 +1,170 @@
 # Framework Integrations
 
-Substr8 works with any framework that supports tool calling.
-
 ## Supported Frameworks
 
-| Framework | Status | Auto-detect |
-|-----------|--------|-------------|
-| LangGraph | ✅ | Yes |
-| PydanticAI | ✅ | Yes |
-| AutoGen | ✅ | Yes |
-| CrewAI | ✅ | Yes |
-| DSPy | ✅ | Yes |
+| Framework | Package | Status |
+|-----------|---------|--------|
+| LangGraph | `substr8-langgraph` | ✅ Production |
+| AutoGen | Coming soon | 🔜 |
+| CrewAI | Coming soon | 🔜 |
+| PydanticAI | Coming soon | 🔜 |
+
+---
 
 ## LangGraph
 
-```python
-from langgraph.prebuilt import create_react_agent
-from langchain_anthropic import ChatAnthropic
+The primary supported framework.
 
-llm = ChatAnthropic(model="claude-sonnet-4-20250514")
-tools = [...]  # Your tools
+### Installation
 
-agent = create_react_agent(llm, tools)
-```
-
-Run with governance:
 ```bash
-substr8 run agent.py
+pip install substr8-langgraph langgraph
 ```
 
-## PydanticAI
+### Basic Usage
 
 ```python
-from pydantic_ai import Agent
+from langgraph.graph import StateGraph, END
+from substr8_langgraph import instrument_graph
+from typing import TypedDict
 
-agent = Agent(
-    'anthropic:claude-sonnet-4-20250514',
-    tools=[...],
+# Define state
+class MyState(TypedDict):
+    input: str
+    output: str
+
+# Define nodes
+def process(state: MyState) -> dict:
+    return {"output": f"Processed: {state['input']}"}
+
+# Build graph
+graph = StateGraph(MyState)
+graph.add_node("process", process)
+graph.set_entry_point("process")
+graph.add_edge("process", END)
+
+# Compile
+compiled = graph.compile()
+
+# Wrap with Substr8
+instrumented = instrument_graph(
+    compiled,
+    agent_id="my-agent",
+    project="my-project",
 )
+
+# Run
+result = instrumented.invoke({"input": "Hello"})
+
+# Result includes proof
+print(f"Output: {result['output']}")
+print(f"Run ID: {result['run_id']}")
+print(f"Proof status: {result['proof_status']}")
 ```
 
-Run with governance:
-```bash
-substr8 run agent.py --framework pydantic-ai
-```
-
-## AutoGen
+### Saving the Proof
 
 ```python
-from autogen import AssistantAgent, UserProxyAgent
+import json
 
-assistant = AssistantAgent("assistant", llm_config={...})
-user = UserProxyAgent("user")
+proof = result["proof"]
+proof_dict = proof.model_dump(mode="json")
+
+with open("runproof.json", "w") as f:
+    json.dump(proof_dict, f, indent=2)
 ```
 
-Run with governance:
+### Verifying
+
 ```bash
-substr8 run agent.py --framework autogen
+substr8 proof verify runproof.json
 ```
 
-## CrewAI
+### Events Captured
+
+| Event | When |
+|-------|------|
+| `run_started` | Graph invocation begins |
+| `node_started` | Node execution begins |
+| `node_ended` | Node execution completes |
+| `run_ended` | Graph invocation completes |
+
+---
+
+## Full Example
+
+See the demo repository: [substr8-langgraph-demo](https://github.com/Substr8-Labs/substr8-langgraph-demo)
+
+```bash
+git clone https://github.com/Substr8-Labs/substr8-langgraph-demo
+cd substr8-langgraph-demo
+pip install -r requirements.txt
+python demo_agent.py
+substr8 proof verify runproof.json
+```
+
+---
+
+## Coming Soon
+
+### AutoGen
+
+Microsoft's multi-agent framework.
 
 ```python
-from crewai import Agent, Task, Crew
-
-researcher = Agent(role="Researcher", goal="Find information", ...)
-task = Task(description="Research topic", agent=researcher)
-crew = Crew(agents=[researcher], tasks=[task])
+# Coming in v1.1
+from substr8_autogen import instrument_agents
 ```
 
-Run with governance:
-```bash
-substr8 run agent.py --framework crewai
-```
+### CrewAI
 
-## DSPy
+Role-based agent orchestration.
 
 ```python
-import dspy
-
-lm = dspy.LM("anthropic/claude-sonnet-4-20250514")
-dspy.configure(lm=lm)
-
-class MyModule(dspy.Module):
-    def forward(self, question):
-        return dspy.ChainOfThought("question -> answer")(question=question)
+# Coming in v1.1
+from substr8_crewai import instrument_crew
 ```
 
-Run with governance:
-```bash
-substr8 run agent.py --framework dspy
-```
+### PydanticAI
 
-## Zero-Friction Integration
-
-Wrap any agent with `govern()`:
+Type-safe agent framework.
 
 ```python
-from substr8 import govern
-
-# Before
-agent = create_react_agent(llm, tools)
-
-# After  
-agent = govern(create_react_agent(llm, tools))
+# Coming in v1.1
+from substr8_pydanticai import instrument_agent
 ```
 
-The wrapper automatically:
-1. Starts run lifecycle
-2. Wraps tool calls
-3. Records audit entries
-4. Generates RunProof on completion
+---
 
-## Framework Detection
+## Custom Integrations
 
-Substr8 auto-detects frameworks by scanning imports:
+For frameworks not yet supported, use `substr8-core` directly:
 
 ```python
-# Detected as langgraph
-from langgraph.prebuilt import create_react_agent
+from substr8_core import RunState, RunStatus
 
-# Detected as pydantic-ai
-from pydantic_ai import Agent
+state = RunState(agent_id="custom-agent", project="my-project")
 
-# Detected as autogen
-from autogen import AssistantAgent
+# Start run
+state.start()
+
+# Emit events during your agent's execution
+state.add_event("tool_called", {"tool": "search", "query": "..."})
+state.add_event("tool_result", {"result": "..."})
+
+# End run
+state.end(RunStatus.COMPLETED, outputs={"answer": "..."})
+
+# Build and save proof
+proof = state.build_proof()
 ```
 
-Force detection with `--framework`:
-```bash
-substr8 run agent.py --framework langgraph
-```
+This gives you full control over event emission.
+
+---
+
+## Next Steps
+
+- [Quickstart](/quickstart) — Full walkthrough
+- [SDK Reference](/sdk) — API details
+- [RunProof](/runproof) — Proof structure

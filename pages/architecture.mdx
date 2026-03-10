@@ -2,107 +2,171 @@
 
 ## Overview
 
-```
-Agent Framework (LangGraph / AutoGen / etc)
-        │
-        ▼
-      MCP Interface
-        │
-        ▼
-┌─────────────────────────┐
-│  Substr8 Governance     │
-│  ├─ FDAA (Agent Spec)   │
-│  ├─ ACC (Policy)        │
-│  ├─ RIL (Run Lifecycle) │
-│  ├─ DCT (Audit Ledger)  │
-│  ├─ CIA (Integrity)     │
-│  └─ GAM (Memory)        │
-└─────────────────────────┘
-        │
-        ▼
-    RunProof Artifact
-```
-
-## Components
-
-### FDAA — File-Driven Agent Architecture
-
-Defines agent identity as files:
-- `agent.md` — Agent specification
-- `tools/*.md` — Tool definitions
-- Produces deterministic hash for versioning
-
-### ACC — Agent Capability Control
-
-Policy enforcement:
-- What tools can this agent use?
-- What data can it access?
-- Runtime capability checking
-
-### RIL — Run Integrity Layer
-
-Run lifecycle management:
-- Run ID generation
-- Start/end tracking
-- State machine for run phases
-
-### DCT — Deterministic Computation Trail
-
-Tamper-evident audit ledger:
-- Hash-chained entries
-- Every action recorded
-- Verifiable offline
-
-### CIA — Conversation Integrity Assurance
-
-Request validation:
-- Validates tool_use/tool_result pairing
-- Repairs broken message sequences
-- Produces integrity receipts
-
-### GAM — Git-Native Agent Memory
-
-Memory with provenance:
-- Semantic search
-- Git-backed versioning
-- Typed hints for retrieval
-
-## Data Flow
+Substr8 is a trust protocol for AI agent execution.
 
 ```
-1. Agent starts run
-   └─→ RIL generates run ID
-
-2. Agent calls tool
-   └─→ ACC checks policy
-   └─→ DCT records action
-   └─→ CIA validates request
-
-3. Agent writes memory
-   └─→ GAM stores with provenance
-   └─→ DCT records operation
-
-4. Run completes
-   └─→ RIL finalizes run
-   └─→ RunProof generated
+Agent Framework (LangGraph, AutoGen, etc.)
+           │
+           ▼
+    ┌─────────────────┐
+    │  Instrumentation │  ← substr8-langgraph
+    └─────────────────┘
+           │
+           ▼
+    ┌─────────────────┐
+    │    RunProof     │  ← Cryptographic receipt
+    └─────────────────┘
+           │
+           ▼
+    ┌─────────────────┐
+    │  Verification   │  ← CLI / Web / API
+    └─────────────────┘
 ```
 
-## Skill-Based Architecture
+---
 
-Governance is invoked as tools, not intercepted:
+## Core Primitives
+
+### RunProof
+
+A cryptographically verifiable receipt containing:
+
+| Component | Purpose |
+|-----------|---------|
+| **Header** | Run metadata (agent, timestamps, status) |
+| **Trace** | Hash-chained event sequence |
+| **Commitments** | Merkle root + signature |
+| **Outputs** | Execution results |
+
+### Hash Chain
+
+Events are chained:
+```
+H₁ = hash(event₁, null)
+H₂ = hash(event₂, H₁)
+H₃ = hash(event₃, H₂)
+```
+
+Any modification breaks the chain.
+
+### Merkle Root
+
+Single hash committing to all events:
+```
+        Root
+       /    \
+      H₁₂    H₃₄
+     /  \   /  \
+    H₁  H₂ H₃  H₄
+```
+
+### Ed25519 Signature
+
+Proof hash signed with private key, verifiable with public key.
+
+---
+
+## Trust Protocol (Future)
+
+Substr8 is evolving toward a full trust protocol with five primitives:
 
 ```
-❌ OLD: Client → Proxy → Gateway → LLM
-         (proxy in traffic path)
-
-✅ NEW: Client → Gateway → LLM
-                   ↓
-            Governance Skill
-         (invoked when needed)
+Discovery    →  Find trusted agents
+    ↓
+Intent       →  Declare what should happen
+    ↓
+Execution    →  Perform the work (RunProof)
+    ↓
+Acceptance   →  Confirm the result
+    ↓
+Attestation  →  Independent verification
 ```
 
-Benefits:
-- No header modification
-- Isolated failures
-- Lower latency
-- Easier debugging
+| Primitive | Status | Description |
+|-----------|--------|-------------|
+| Execution | ✅ V1 | RunProof generation and verification |
+| Intent | 🔜 v2.1 | Commit to task before execution |
+| Acceptance | 📋 Planned | Approval events between agents |
+| Attestation | 📋 Planned | Third-party verification |
+| Discovery | 📋 Future | Trust-based agent discovery |
+
+---
+
+## Modules
+
+### FDAA (File-Driven Agent Architecture)
+
+Define agents as files with cryptographic identity.
+
+```
+my-agent/
+├── agent.yaml       # Agent definition
+├── skills/          # Capabilities
+└── policy.yaml      # Access control
+```
+
+Hash of definition = agent identity.
+
+### GAM (Git-Native Agent Memory)
+
+Semantic memory with git-like provenance.
+
+```bash
+substr8 gam remember "User preference: dark mode"
+substr8 gam recall "user preferences"
+```
+
+### ACC (Agent Capability Control)
+
+Runtime capability enforcement.
+
+```yaml
+# policy.yaml
+capabilities:
+  - tool: web_search
+    allowed: true
+  - tool: send_email
+    allowed: false
+    reason: "Requires approval"
+```
+
+### DCT (Deterministic Capability Tokens)
+
+Tamper-evident audit ledger for all actions.
+
+### RIL (Runtime Integrity Layer)
+
+Sandboxed execution with verification.
+
+---
+
+## Verification Flow
+
+```
+1. Load RunProof JSON
+2. Validate schema
+3. Verify hash chain (each event links to previous)
+4. Recompute Merkle root
+5. Verify signature against public key
+6. Return result
+```
+
+All checks must pass for valid proof.
+
+---
+
+## Packages
+
+| Package | PyPI | Description |
+|---------|------|-------------|
+| `substr8` | [link](https://pypi.org/project/substr8/) | CLI + platform |
+| `substr8-core` | [link](https://pypi.org/project/substr8-core/) | Schemas + verification |
+| `substr8-langgraph` | [link](https://pypi.org/project/substr8-langgraph/) | LangGraph instrumentation |
+
+---
+
+## Links
+
+- [GitHub](https://github.com/Substr8-Labs)
+- [Demo Repo](https://github.com/Substr8-Labs/substr8-langgraph-demo)
+- [Verify UI](https://verify-ui-gamma.vercel.app)

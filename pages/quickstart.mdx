@@ -1,157 +1,127 @@
 # Getting Started
 
-Get agent observability in 5 minutes.
+Generate cryptographically verifiable receipts for your AI agents in 60 seconds.
 
 ## Installation
 
 ```bash
-pip install substr8
+pip install substr8-langgraph
 ```
 
 ## Quick Start
 
-### Option 1: Direct SDK Usage
-
-```python
-from substr8 import Substr8Client
-
-client = Substr8Client()
-
-# Start a run
-run = client.run_start(agent_id="my-agent")
-
-# Emit events during execution
-client.run_event("tool.called", {"tool": "web_search", "query": "..."})
-client.run_event("tool.result", {"result": "..."})
-
-# End the run
-result = client.run_end()
-print(f"Run {run.run_id} completed")
-print(f"Root hash: {result['root_hash']}")
-
-# Verify integrity
-verification = client.verify_run(run.run_id)
-print(f"Verified: {verification['verified']}")
-```
-
-### Option 2: Framework Adapters
-
-#### OpenAI
-
-```python
-from openai import OpenAI
-from substr8.adapters.openai import wrap_openai
-
-# One line to add observability
-client = wrap_openai(OpenAI())
-
-# Use normally - events auto-emitted
-response = client.chat.completions.create(
-    model="gpt-4",
-    messages=[{"role": "user", "content": "Hello"}]
-)
-
-client.end_run()
-```
-
-#### Anthropic
-
-```python
-from anthropic import Anthropic
-from substr8.adapters.anthropic import wrap_anthropic
-
-client = wrap_anthropic(Anthropic())
-
-response = client.messages.create(
-    model="claude-sonnet-4-20250514",
-    max_tokens=1024,
-    messages=[{"role": "user", "content": "Hello"}]
-)
-
-client.end_run()
-```
-
-#### LangGraph
+### 1. Wrap your LangGraph
 
 ```python
 from langgraph.graph import StateGraph
-from substr8.adapters.langgraph import create_callback
+from substr8_langgraph import instrument_graph
 
-callback = create_callback(agent_id="my-langgraph-agent")
+# Build your graph normally
+graph = StateGraph(MyState)
+graph.add_node("search", search_node)
+graph.add_node("analyze", analyze_node)
+graph.set_entry_point("search")
+graph.add_edge("search", "analyze")
 
-result = graph.invoke(
-    initial_state,
-    config={"callbacks": [callback]}
+# Compile it
+compiled = graph.compile()
+
+# Wrap with Substr8 instrumentation (one line)
+instrumented = instrument_graph(
+    compiled,
+    agent_id="my-agent",
+    project="my-project",
 )
 
-callback.end_run()
+# Run the agent
+result = instrumented.invoke({"query": "..."})
+
+# The result includes the proof
+print(f"Run ID: {result['run_id']}")
+print(f"Proof status: {result['proof_status']}")
 ```
 
-#### CrewAI
+### 2. Extract the RunProof
 
 ```python
-from crewai import Crew
-from substr8.adapters.crewai import wrap_crew
+import json
 
-crew = Crew(agents=[...], tasks=[...])
-wrapped = wrap_crew(crew)
+# Get the proof from the result
+proof = result["proof"]
 
-result = wrapped.kickoff()
-# Events auto-emitted, run auto-ended
+# Save to file
+with open("runproof.json", "w") as f:
+    json.dump(proof.model_dump(mode="json"), f, indent=2)
 ```
+
+### 3. Verify locally (CLI)
+
+```bash
+pip install substr8
+
+substr8 proof verify runproof.json
+```
+
+Output:
+```
+╭─────────────────── Verification Result ───────────────────╮
+│ ✓ RunProof: VALID                                         │
+╰───────────────────────────────────────────────────────────╯
+
+  Proof ID   proof_abc123...
+  Run ID     run_xyz789...
+  Agent      my-agent
+
+Checks:
+  ✓ schema
+  ✓ hash_chain
+  ✓ merkle_root
+  ✓ signature
+```
+
+### 4. Verify in browser
+
+Upload `runproof.json` to [verify.substr8labs.com](https://verify-ui-gamma.vercel.app)
+
+---
 
 ## What Gets Tracked
 
-Every run produces a **RunProof** — a cryptographically verifiable artifact containing:
+Every instrumented run produces a **RunProof** containing:
 
 | Event | When |
 |-------|------|
-| `run.started` | Execution begins |
-| `prompt.sent` | Prompt sent to model |
-| `model.responded` | Model response received |
-| `tool.called` | Tool invocation |
-| `tool.result` | Tool result |
-| `memory.write` | Memory stored |
-| `decision.recorded` | Decision logged |
-| `run.completed` | Execution finished |
+| `run_started` | Execution begins |
+| `node_started` | Graph node begins |
+| `node_ended` | Graph node completes |
+| `tool_called` | Tool invocation |
+| `tool_result` | Tool result |
+| `run_ended` | Execution finished |
 
-## Verify a Run
+All events are:
+- **Hash-chained** — tamper-evident sequence
+- **Merkle-rooted** — single commitment to all events
+- **Ed25519-signed** — cryptographic proof of origin
 
-```python
-# Local verification
-verification = client.verify_run("run-abc123")
+---
 
-if verification["verified"]:
-    print(f"✅ Chain valid: {verification['root_hash']}")
-else:
-    print(f"❌ Chain broken: {verification['error']}")
-```
+## Full Example
+
+See the complete demo: [substr8-langgraph-demo](https://github.com/Substr8-Labs/substr8-langgraph-demo)
 
 ```bash
-# CLI verification
-substr8 verify run-abc123
+git clone https://github.com/Substr8-Labs/substr8-langgraph-demo
+cd substr8-langgraph-demo
+pip install -r requirements.txt
+python demo_agent.py
+substr8 proof verify runproof.json
 ```
 
-## Configuration
-
-```python
-from substr8 import Substr8Client, Substr8Config
-
-config = Substr8Config(
-    base_url="http://localhost:8100",           # Event Ingest API
-    agent_registry_url="http://localhost:8099", # TowerHQ
-    gam_url="http://localhost:8091",            # Memory
-    acc_url="http://localhost:8096",            # Governance
-    api_key="sk-...",                           # Optional auth
-    agent_id="my-agent",                        # Default agent
-)
-
-client = Substr8Client(config)
-```
+---
 
 ## Next Steps
 
-- [SDK Reference](/sdk) — All 10 functions
-- [Adapters](/adapters) — Framework integrations
-- [API Reference](/api) — REST endpoints
-- [RunProof](/runproof) — Verification artifacts
+- [CLI Reference](/cli) — Verification commands
+- [RunProof](/runproof) — What's in a proof
+- [SDK Reference](/sdk) — All SDK functions
+- [Architecture](/architecture) — How it works
