@@ -1,150 +1,113 @@
-# Substr8
+# Agents with receipts.
 
-**Agents with receipts.**
-
-Substr8 generates cryptographically verifiable receipts for AI agent execution.
+**RunProof is an execution trace for AI agents that anyone can verify.**
 
 ---
 
 ## The Problem
 
-AI agents are black boxes. When something goes wrong, you can't prove:
-- What the agent actually did
-- Whether it followed policy
-- If the logs were tampered with
+AI agents are black boxes. They send emails, write code, call APIs, move money — and you have no proof of what actually happened.
+
+When something goes wrong:
+- **Logs?** Maybe. Scattered across services.
+- **Traces?** Incomplete. Not tamper-proof.
+- **Trust?** "It worked on my machine."
 
 ---
 
 ## The Solution
 
-Wrap your agent workflow with Substr8. Every run produces a **RunProof** — a cryptographically verifiable record of execution.
+RunProof gives you a **verifiable execution artifact** for every agent run.
 
-**RunProof** = cryptographically verifiable record of an agent execution
+Not a log. Not telemetry. A receipt.
 
-What's inside:
-- ✓ **Hash-chained trace** — ordered, tamper-evident events
-- ✓ **Merkle root** — single commitment to all events  
-- ✓ **Ed25519 signature** — proof of origin
-- ✓ **Verification** — anyone can check validity
+```json
+{
+  "agent": "support/resolver",
+  "events": [
+    {"type": "tool_call", "tool": "search_kb"},
+    {"type": "tool_call", "tool": "send_email"}
+  ],
+  "merkle_root": "sha256:...",
+  "signature": "ed25519:..."
+}
+```
+
+**Anyone can verify this. Without trusting you.**
 
 ---
 
-## How It Works
+## The Mental Model
 
-```
-Agent Execution
-       │
-       ▼
-Substr8 instrumentation
-       │
-       ▼
-   Event Trace
-       │
-       ▼
-Hash Chain + Merkle Root
-       │
-       ▼
-    RunProof
-       │
-       ├── CLI verification
-       └── verify.substr8labs.com
-```
+> Git gives you history for code.
+> RunProof gives you history for agent execution.
 
 ---
 
-## Quick Start
+## Try It (60 seconds)
 
 ```bash
-# Install
-pip install substr8-langgraph
+pip install substr8-core substr8-cli
+
+# Run your agent, get a runproof.json
+
+substr8 proof inspect runproof.json
 ```
 
-```python
-from substr8_langgraph import instrument_graph
+```
+✓ RunProof VALID
 
-# Wrap your LangGraph
-instrumented = instrument_graph(graph, agent_id="my-agent", project="my-project")
-
-# Run → proof is in the result
-result = instrumented.invoke(input)
-
-# Save the proof
-import json
-with open("runproof.json", "w") as f:
-    json.dump(result["proof"].model_dump(mode="json"), f)
+#1  run_started      → Agent: support/resolver
+#2  tool_call        → search_kb
+#3  tool_result      → sha256:a4f2...
+#4  tool_call        → send_email
+#5  run_completed    → Status: completed
 ```
 
-```bash
-# Verify
-substr8 proof verify runproof.json
-# → ✓ RunProof: VALID
-```
-
-[Your First RunProof →](/first-runproof) — Full walkthrough in 60 seconds
+**That's it.** You can now see exactly what your agent did.
 
 ---
 
-## Verification
+## Why It Matters
 
-### CLI
-
-```bash
-substr8 proof verify runproof.json
-
-# Output:
-# ✓ RunProof: VALID
-# Checks: schema ✓ hash_chain ✓ merkle_root ✓ signature ✓
-```
-
-### Web
-
-Upload to [verify.substr8labs.com](https://verify-ui-gamma.vercel.app)
+| Scenario | Without RunProof | With RunProof |
+|----------|------------------|---------------|
+| Debug agent behavior | Dig through logs | See the exact trace |
+| Customer dispute | "We think it did X" | "Here's the signed proof" |
+| CI for agents | Hope it works | Assert on behavior |
+| Compliance audit | "Trust us" | Verifiable artifact |
 
 ---
 
-## Why Substr8?
+## Verify Online
 
-| Before | After |
-|--------|-------|
-| "The agent ran" | "Here's the cryptographic proof" |
-| Trust the logs | Verify the proof |
-| Hope nothing changed | Detect any tampering |
+Upload any RunProof and inspect all 4 views:
 
----
+→ [**runproof.substr8labs.com**](https://runproof.substr8labs.com)
 
-## Use Cases
-
-- **Audit trails** — Prove what happened to regulators
-- **Debugging** — Replay exactly what occurred
-- **Compliance** — Attach proofs to reports
-- **Multi-agent** — Verify work between agents
-- **CI/CD** — Gate deployments on verification
+- **Summary** — Valid/invalid status
+- **Timeline** — Ordered events
+- **Lineage** — Parent/child proofs
+- **Report** — Verification checks
 
 ---
 
-## Comparison
+## Get Started
 
-| Technology | Verifies |
-|------------|----------|
-| Docker | Container images |
-| SBOM | Software contents |
-| Sigstore | Software supply chain |
-| **Substr8** | **AI agent execution** |
+import { Cards, Card } from 'nextra/components'
+
+<Cards>
+  <Card title="Quickstart" href="/quickstart" />
+  <Card title="Your First RunProof" href="/first-runproof" />
+  <Card title="CLI Reference" href="/cli" />
+  <Card title="Specification" href="/spec" />
+</Cards>
 
 ---
 
 ## Links
 
 - [GitHub](https://github.com/Substr8-Labs)
-- [PyPI](https://pypi.org/project/substr8/)
-- [Demo Repo](https://github.com/Substr8-Labs/substr8-langgraph-demo)
-- [Verify UI](https://verify-ui-gamma.vercel.app)
-
----
-
-## Getting Started
-
-1. [Your First RunProof](/first-runproof) — 60-second walkthrough
-2. [RunProof](/runproof) — What's in a proof
-3. [CLI Reference](/cli) — Verification commands
-4. [Examples](/examples) — Cookbook recipes
+- [PyPI: substr8-core](https://pypi.org/project/substr8-core/)
+- [Verify UI](https://runproof.substr8labs.com)
+- [Docs](https://docs.substr8labs.com)
