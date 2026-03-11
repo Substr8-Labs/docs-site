@@ -1,0 +1,51 @@
+# Cookbook
+
+Practical recipes for common RunProof tasks.
+
+## Recipes
+
+### Getting Started
+
+- [**Basic LangGraph**](/cookbook/basic-langgraph) — Generate your first RunProof from a LangGraph workflow
+
+### Verification
+
+- [**Verify a Proof**](/cookbook/verify-proof) — Use CLI, Python, or Web UI to verify proofs
+
+### Distribution
+
+- [**Add a Badge**](/cookbook/add-badge) — Show verification status in your README
+
+---
+
+## Quick Examples
+
+### Generate a Proof
+
+```bash
+pip install substr8-core substr8-cli langgraph
+python your_agent.py  # outputs runproof.json
+```
+
+### Verify a Proof
+
+```bash
+substr8 proof verify runproof.json
+```
+
+### Inspect Details
+
+```bash
+substr8 proof inspect runproof.json --events
+```
+
+---
+
+## More Coming Soon
+
+- Multi-agent workflows
+- Human-in-the-loop patterns
+- Policy enforcement
+- Chainable proofs (lineage)
+
+Have a recipe request? [Open an issue](https://github.com/Substr8-Labs/substr8-langgraph-demo/issues).
