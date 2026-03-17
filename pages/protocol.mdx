@@ -1,0 +1,193 @@
+# RunProof Protocol
+
+import { Callout, Tabs, Tab } from 'nextra/components'
+
+<Callout type="info">
+RunProof is not just a receipt format — it's a **protocol** for verifiable agent execution that composes from simple receipts to complex proof graphs.
+</Callout>
+
+## Protocol Layers
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 RUNPROOF PROTOCOL                   │
+├─────────────────────────────────────────────────────┤
+│ Layer 7: Agent Lifecycle    (always-on agents)     │
+│ Layer 6: External Anchoring (blockchain/notary)    │
+│ Layer 5: Policy Binding     (governance)           │
+│ Layer 4: State Proofs       (transitions)          │
+│ Layer 3: Proof Graphs       (DAG composition)      │
+│ Layer 2: Signatures         (attestation)          │
+│ Layer 1: Receipts           (atomic proofs)        │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Layer 1: Receipts
+
+The atomic primitive. A single execution receipt containing:
+
+- Hash-chained event sequence
+- Root hash commitment
+- Input/output/environment hashes
+- Execution metadata
+
+```json
+{
+  "run_id": "run-abc123",
+  "proof_type": "receipt",
+  "root_hash": "sha256:7b2042b7fd1ed84e...",
+  "events": [...],
+  "status": "completed"
+}
+```
+
+---
+
+## Layer 2: Signatures
+
+Ed25519 attestation proving who generated the proof:
+
+```json
+{
+  "signatures": [
+    {
+      "signer_id": "runtime:81cee45e9ab518db",
+      "algorithm": "ed25519",
+      "signature": "base64:...",
+      "signed_at": "2026-03-17T00:00:00Z"
+    }
+  ]
+}
+```
+
+**Verification**: Anyone with the public key can verify.
+
+---
+
+## Layer 3: Proof Graphs
+
+Receipts compose into DAGs representing complex workflows:
+
+```
+     Orchestrator (root)
+        /    |    \
+       ▼     ▼     ▼
+   Research Writer Review
+       |           ▲
+       ▼           │
+    Retry ─────────┘ (approval)
+```
+
+**Relationship Types:**
+- `delegation` — Parent spawned child
+- `retry` — Same task, new attempt
+- `branch` — Parallel execution
+- `approval` — Human gate passed
+- `dependency` — Waited for result
+- `merge` — Branches joined
+
+---
+
+## Layer 4: State Proofs
+
+Prove state transitions across runs:
+
+```
+State A ──RunProof──▶ State B ──RunProof──▶ State C
+```
+
+**State Types:**
+- `memory` — Agent memory/context
+- `session` — Conversation state
+- `workflow` — Multi-run workflow state
+- `agent` — Agent definition changes
+
+---
+
+## Layer 5: Policy Binding
+
+Link runs to governing policies:
+
+```json
+{
+  "policy_bindings": [
+    {
+      "policy_type": "acc_token",
+      "policy_id": "acc_7f8a9b2c...",
+      "policy_hash": "sha256:...",
+      "binding_status": "applied"
+    }
+  ]
+}
+```
+
+**Binding Status:**
+- `applied` — Policy was in effect
+- `violated` — Policy was violated
+- `bypassed` — Override with audit trail
+
+---
+
+## Layer 6: External Anchoring
+
+Anchor proofs to external systems for immutable settlement:
+
+```
+RunProof
+    ↓
+Anchor Request
+    ↓
+┌─────────────────────┐
+│ Bitcoin / Ethereum  │
+│ Notary Service      │
+│ Timestamping Auth   │
+└─────────────────────┘
+    ↓
+Confirmation (tx_id, block, timestamp)
+```
+
+**Anchor Types:**
+- `bitcoin` — OP_RETURN or merkle tree
+- `ethereum` — Event log or state
+- `solana` — Memo program
+- `notary` — Legal notary service
+- `timestamping_authority` — RFC 3161
+
+---
+
+## Layer 7: Agent Lifecycle
+
+Support for always-on agents with persistent ledgers:
+
+```
+registered → active ↔ paused → retired → archived
+```
+
+**Features:**
+- Heartbeat tracking
+- Ledger binding
+- Run/entry statistics
+- Staleness detection
+
+---
+
+## Protocol Guarantees
+
+| Guarantee | How |
+|-----------|-----|
+| **Completeness** | Hash chain breaks if events missing |
+| **Ordering** | Sequential hashing enforces order |
+| **Integrity** | Root hash changes if anything modified |
+| **Attribution** | Signatures prove who attested |
+| **Provenance** | Proof graphs trace lineage |
+| **Settlement** | External anchors provide finality |
+
+---
+
+## Next Steps
+
+- [API Reference](/api) — Full endpoint documentation
+- [Verification](/verification) — How to verify proofs
+- [SDK Reference](/sdk) — Client libraries

@@ -1,172 +1,252 @@
 # Architecture
 
+import { Callout } from 'nextra/components'
+
 ## Overview
 
-Substr8 is a trust protocol for AI agent execution.
+RunProof is a **trust protocol** for AI agent execution. It provides cryptographic receipts that prove what an agent did, when, and how — with external verification possible by anyone.
 
 ```
-Agent Framework (LangGraph, AutoGen, etc.)
-           │
-           ▼
-    ┌─────────────────┐
-    │  Instrumentation │  ← substr8-langgraph
-    └─────────────────┘
-           │
-           ▼
-    ┌─────────────────┐
-    │    RunProof     │  ← Cryptographic receipt
-    └─────────────────┘
-           │
-           ▼
-    ┌─────────────────┐
-    │  Verification   │  ← CLI / Web / API
-    └─────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    AGENT RUNTIME                            │
+│  OpenClaw │ LangGraph │ AutoGen │ CrewAI │ Custom          │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   INSTRUMENTATION                           │
+│  Hooks capture: inputs, tool calls, outputs, environment    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   RUNPROOF BUILDER                          │
+│  - Hash chain events                                        │
+│  - Compute root hash                                        │
+│  - Sign with Ed25519                                        │
+│  - Generate fingerprints                                    │
+│  - Persist to database                                      │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   PROOF ARTIFACTS                           │
+│  Receipts │ Proof Graphs │ State Chains │ Policy Bindings   │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   VERIFICATION                              │
+│  CLI │ Web │ API │ Third-party                              │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   EXTERNAL ANCHORING                        │
+│  Bitcoin │ Ethereum │ Solana │ Notary │ TSA                 │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Core Primitives
 
-### RunProof
+### 1. RunProof (Receipt)
 
-A cryptographically verifiable receipt containing:
+The atomic unit. A single execution receipt containing:
 
 | Component | Purpose |
 |-----------|---------|
-| **Header** | Run metadata (agent, timestamps, status) |
-| **Trace** | Hash-chained event sequence |
-| **Commitments** | Merkle root + signature |
-| **Outputs** | Execution results |
+| **Events** | Hash-chained execution trace |
+| **Root Hash** | Single commitment to all events |
+| **Signatures** | Ed25519 attestation |
+| **Fingerprints** | Identity hierarchy |
+| **Three Hashes** | input_hash, output_hash, environment_hash |
 
-### Hash Chain
+### 2. Proof Graph
 
-Events are chained:
+Receipts compose into directed acyclic graphs:
+
 ```
-H₁ = hash(event₁, null)
-H₂ = hash(event₂, H₁)
-H₃ = hash(event₃, H₂)
-```
-
-Any modification breaks the chain.
-
-### Merkle Root
-
-Single hash committing to all events:
-```
-        Root
+     Parent Run
        /    \
-      H₁₂    H₃₄
-     /  \   /  \
-    H₁  H₂ H₃  H₄
+      ▼      ▼
+   Child 1  Child 2
+      |
+      ▼
+   Retry
 ```
 
-### Ed25519 Signature
+**Relationships:** delegation, retry, branch, approval, dependency, merge
 
-Proof hash signed with private key, verifiable with public key.
+### 3. State Proof
+
+Links state transitions to executions:
+
+```
+State A ──Run 1──▶ State B ──Run 2──▶ State C
+```
+
+**Types:** memory, session, workflow, agent
+
+### 4. Policy Binding
+
+Associates runs with governing policies:
+
+```json
+{
+  "policy_type": "acc_token",
+  "policy_id": "acc_7f8a9b2c",
+  "binding_status": "applied"
+}
+```
+
+### 5. External Anchor
+
+Settles proofs to external systems:
+
+```
+Proof → Anchor Request → Blockchain → Confirmation
+```
+
+### 6. Agent Lifecycle
+
+Tracks always-on agents:
+
+```
+registered → active ↔ paused → retired → archived
+```
 
 ---
 
-## Trust Protocol (Future)
+## Hash Chain
 
-Substr8 is evolving toward a full trust protocol with five primitives:
+Events are chained sequentially:
 
 ```
-Discovery    →  Find trusted agents
-    ↓
-Intent       →  Declare what should happen
-    ↓
-Execution    →  Perform the work (RunProof)
-    ↓
-Acceptance   →  Confirm the result
-    ↓
-Attestation  →  Independent verification
+H₁ = SHA256(event₁ || null)
+H₂ = SHA256(event₂ || H₁)
+H₃ = SHA256(event₃ || H₂)
+...
+root_hash = Hₙ
 ```
 
-| Primitive | Status | Description |
-|-----------|--------|-------------|
-| Execution | ✅ V1 | RunProof generation and verification |
-| Intent | 🔜 v2.1 | Commit to task before execution |
-| Acceptance | 📋 Planned | Approval events between agents |
-| Attestation | 📋 Planned | Third-party verification |
-| Discovery | 📋 Future | Trust-based agent discovery |
+**Guarantee:** Any modification to any event breaks the chain.
 
 ---
 
-## Modules
+## Fingerprint Hierarchy
 
-### FDAA (File-Driven Agent Architecture)
-
-Define agents as files with cryptographic identity.
+Identity derived from structure:
 
 ```
-my-agent/
-├── agent.yaml       # Agent definition
-├── skills/          # Capabilities
-└── policy.yaml      # Access control
+spec_fingerprint       ← Agent definition
+  └── runtime_fingerprint    ← Runtime environment
+       └── environment_fingerprint  ← Execution context
+            └── instance_fingerprint  ← Specific instance
+                 └── run_fingerprint   ← This execution
 ```
 
-Hash of definition = agent identity.
+---
 
-### GAM (Git-Native Agent Memory)
+## Signature Scheme
 
-Semantic memory with git-like provenance.
+Ed25519 signatures provide:
 
-```bash
-substr8 gam remember "User preference: dark mode"
-substr8 gam recall "user preferences"
+- **Non-repudiation** — Signer cannot deny
+- **Tamper evidence** — Any change invalidates
+- **Verifiability** — Anyone can verify with public key
+
+```json
+{
+  "signer_id": "runtime:81cee45e9ab518db",
+  "algorithm": "ed25519",
+  "signature": "base64:...",
+  "signed_at": "2026-03-17T00:00:00Z"
+}
 ```
 
-### ACC (Agent Capability Control)
+---
 
-Runtime capability enforcement.
+## Verification Guarantees
+
+| Property | Mechanism |
+|----------|-----------|
+| **Completeness** | Hash chain breaks if events missing |
+| **Ordering** | Sequential hashing enforces sequence |
+| **Integrity** | Root hash changes if anything modified |
+| **Attribution** | Signatures prove attestation |
+| **Provenance** | Proof graphs trace lineage |
+| **Settlement** | External anchors provide finality |
+
+---
+
+## Database Schema
+
+The RunProof Builder uses SQLite with these tables:
+
+| Table | Purpose |
+|-------|---------|
+| `runproofs` | Completed proofs |
+| `active_runs` | In-progress runs (persistent) |
+| `proof_graph` | Proof relationships |
+| `state_proofs` | State transitions |
+| `policy_bindings` | Policy associations |
+| `external_anchors` | Anchor records |
+| `agent_lifecycle` | Agent status |
+| `ledger_entries` | Append-only ledger |
+| `ledger_checkpoints` | Ledger checkpoints |
+
+---
+
+## Event Vocabulary
+
+Canonical event types mapped from runtime adapters:
+
+| Adapter Event | Canonical Type |
+|---------------|----------------|
+| `message.received` | `input_received` |
+| `message.sent` | `output_produced` |
+| `tool.invoke` | `tool_invoked` |
+| `tool.result` | `tool_completed` |
+| `environment.captured` | `environment_snapshot` |
+| `subagent.spawn` | `delegated` |
+| `approval.granted` | `approved` |
+| `policy.violation` | `blocked` |
+
+---
+
+## Integration Points
+
+### OpenClaw
+
+Hooks in OpenClaw gateway automatically emit events:
 
 ```yaml
-# policy.yaml
-capabilities:
-  - tool: web_search
-    allowed: true
-  - tool: send_email
-    allowed: false
-    reason: "Requires approval"
+hooks:
+  internal:
+    entries:
+      substr8-runtime:
+        enabled: true
 ```
 
-### DCT (Deterministic Capability Tokens)
+### LangGraph
 
-Tamper-evident audit ledger for all actions.
+Use `substr8-langgraph` instrumentation:
 
-### RIL (Runtime Integrity Layer)
+```python
+from substr8_langgraph import instrument
 
-Sandboxed execution with verification.
-
----
-
-## Verification Flow
-
-```
-1. Load RunProof JSON
-2. Validate schema
-3. Verify hash chain (each event links to previous)
-4. Recompute Merkle root
-5. Verify signature against public key
-6. Return result
+@instrument
+def my_graph():
+    ...
 ```
 
-All checks must pass for valid proof.
+### Custom Runtimes
 
----
+POST events directly to `/v1/run/event`:
 
-## Packages
-
-| Package | PyPI | Description |
-|---------|------|-------------|
-| `substr8` | [link](https://pypi.org/project/substr8/) | CLI + platform |
-| `substr8-core` | [link](https://pypi.org/project/substr8-core/) | Schemas + verification |
-| `substr8-langgraph` | [link](https://pypi.org/project/substr8-langgraph/) | LangGraph instrumentation |
-
----
-
-## Links
-
-- [GitHub](https://github.com/Substr8-Labs)
-- [Demo Repo](https://github.com/Substr8-Labs/substr8-langgraph-demo)
-- [Verify UI](https://verify-ui-gamma.vercel.app)
+```bash
+curl -X POST http://localhost:8097/v1/run/event \
+  -d '{"run_id": "...", "type": "...", "data": {...}}'
+```

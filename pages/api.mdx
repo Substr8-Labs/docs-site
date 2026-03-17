@@ -1,0 +1,388 @@
+# API Reference
+
+import { Callout, Tabs, Tab } from 'nextra/components'
+
+<Callout type="info">
+The RunProof Builder API at `localhost:8097` (or your deployment URL).
+</Callout>
+
+## Base URL
+
+```
+http://localhost:8097
+```
+
+---
+
+## Health
+
+### GET /health
+
+Check service health.
+
+```bash
+curl http://localhost:8097/health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "service": "runproof-builder",
+  "active_runs": 2,
+  "database": "/path/to/runproofs.db"
+}
+```
+
+---
+
+## Run Lifecycle
+
+### POST /v1/run/start
+
+Start a new run.
+
+```bash
+curl -X POST http://localhost:8097/v1/run/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "run_id": "run-abc123",
+    "agent_id": "my-agent",
+    "adapter": "openclaw"
+  }'
+```
+
+**Response:**
+```json
+{
+  "status": "started",
+  "run_id": "run-abc123",
+  "trace_id": "trace-xyz789"
+}
+```
+
+### POST /v1/run/event
+
+Record an event (auto-creates run if missing).
+
+```bash
+curl -X POST http://localhost:8097/v1/run/event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "run_id": "run-abc123",
+    "event_id": "evt-001",
+    "type": "message.received",
+    "timestamp": "2026-03-17T00:00:00Z",
+    "source": "user",
+    "data": {"content": "Hello"}
+  }'
+```
+
+**Response:**
+```json
+{
+  "status": "recorded",
+  "event_id": "evt-001",
+  "seq": 0
+}
+```
+
+### POST /v1/run/end
+
+End run and generate proof.
+
+```bash
+curl -X POST http://localhost:8097/v1/run/end \
+  -H "Content-Type: application/json" \
+  -d '{
+    "run_id": "run-abc123",
+    "success": true
+  }'
+```
+
+**Response:**
+```json
+{
+  "status": "completed",
+  "run_id": "run-abc123",
+  "root_hash": "7b2042b7fd1ed84ee7f1272a...",
+  "event_count": 29
+}
+```
+
+### GET /v1/runproof/{run_id}
+
+Get the full RunProof.
+
+```bash
+curl http://localhost:8097/v1/runproof/run-abc123
+```
+
+### GET /v1/runproof/{run_id}/verify
+
+Verify proof integrity and signatures.
+
+```bash
+curl http://localhost:8097/v1/runproof/run-abc123/verify
+```
+
+**Response:**
+```json
+{
+  "run_id": "run-abc123",
+  "verified": true,
+  "chain_valid": true,
+  "signatures": {
+    "count": 1,
+    "all_valid": true
+  },
+  "root_hash": "7b2042b7fd1ed84e..."
+}
+```
+
+---
+
+## Proof Graphs
+
+### POST /v1/proof-graph/link
+
+Link two proofs.
+
+```bash
+curl -X POST http://localhost:8097/v1/proof-graph/link \
+  -H "Content-Type: application/json" \
+  -d '{
+    "child_proof_id": "run-child",
+    "parent_proof_id": "run-parent",
+    "relation": "delegation"
+  }'
+```
+
+**Relation Types:** `retry`, `delegation`, `branch`, `approval`, `dependency`, `merge`
+
+### GET /v1/proof-graph/{root_id}
+
+Get full graph from root.
+
+```bash
+curl http://localhost:8097/v1/proof-graph/run-root
+```
+
+**Response:**
+```json
+{
+  "root_id": "run-root",
+  "nodes": [...],
+  "edges": [...],
+  "node_count": 3,
+  "edge_count": 2,
+  "graph_hash": "sha256:d86d18d61f34984c..."
+}
+```
+
+### GET /v1/runproof/{run_id}/ancestry
+
+Get lineage to root.
+
+```bash
+curl http://localhost:8097/v1/runproof/run-child/ancestry
+```
+
+### GET /v1/runproof/{run_id}/descendants
+
+Get all children.
+
+```bash
+curl http://localhost:8097/v1/runproof/run-parent/descendants
+```
+
+### GET /v1/proof-graph/{root_id}/verify
+
+Verify and sign entire graph.
+
+```bash
+curl http://localhost:8097/v1/proof-graph/run-root/verify
+```
+
+---
+
+## State Proofs
+
+### POST /v1/state-proof
+
+Record a state transition.
+
+```bash
+curl -X POST http://localhost:8097/v1/state-proof \
+  -H "Content-Type: application/json" \
+  -d '{
+    "run_id": "run-abc123",
+    "state_type": "memory",
+    "prev_state_hash": "sha256:...",
+    "next_state_hash": "sha256:..."
+  }'
+```
+
+**State Types:** `memory`, `session`, `workflow`, `agent`
+
+### GET /v1/runproof/{run_id}/state-proofs
+
+Get state proofs for a run.
+
+### GET /v1/state-chain/{state_type}/verify
+
+Verify state chain integrity.
+
+```bash
+curl http://localhost:8097/v1/state-chain/memory/verify
+```
+
+---
+
+## Policy Binding
+
+### POST /v1/policy-binding
+
+Bind a policy to a run.
+
+```bash
+curl -X POST http://localhost:8097/v1/policy-binding \
+  -H "Content-Type: application/json" \
+  -d '{
+    "run_id": "run-abc123",
+    "policy_type": "acc_token",
+    "policy_id": "acc_xyz",
+    "policy_hash": "sha256:...",
+    "binding_status": "applied"
+  }'
+```
+
+**Policy Types:** `acc_token`, `governance_rule`, `capability_grant`, `constraint`
+
+**Binding Status:** `applied`, `violated`, `bypassed`
+
+### GET /v1/runproof/{run_id}/policies
+
+Get all policies for a run.
+
+### GET /v1/policy/{policy_id}/runs
+
+Get all runs governed by a policy.
+
+---
+
+## External Anchoring
+
+### POST /v1/anchor
+
+Submit proof for anchoring.
+
+```bash
+curl -X POST http://localhost:8097/v1/anchor \
+  -H "Content-Type: application/json" \
+  -d '{
+    "proof_id": "run-abc123",
+    "proof_type": "run",
+    "anchor_type": "ethereum",
+    "anchor_network": "mainnet"
+  }'
+```
+
+**Proof Types:** `run`, `graph`, `state_chain`, `checkpoint`
+
+**Anchor Types:** `bitcoin`, `ethereum`, `solana`, `notary`, `timestamping_authority`
+
+### GET /v1/anchor/{anchor_id}
+
+Get anchor status.
+
+### POST /v1/anchor/{anchor_id}/confirm
+
+Confirm anchor with transaction details.
+
+```bash
+curl -X POST http://localhost:8097/v1/anchor/anc-123/confirm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "anchor_tx_id": "0x123abc...",
+    "anchor_block": "18500000"
+  }'
+```
+
+### GET /v1/anchors/pending
+
+List pending anchors.
+
+---
+
+## Agent Lifecycle
+
+### POST /v1/agent/{agent_id}/register
+
+Register an always-on agent.
+
+### POST /v1/agent/{agent_id}/heartbeat
+
+Record heartbeat (auto-registers if new).
+
+### POST /v1/agent/{agent_id}/pause
+
+Pause an active agent.
+
+### POST /v1/agent/{agent_id}/activate
+
+Activate a paused agent.
+
+### POST /v1/agent/{agent_id}/retire
+
+Retire an agent (preserves history).
+
+### GET /v1/agent/{agent_id}/lifecycle
+
+Get lifecycle status.
+
+### GET /v1/agents/active
+
+List active agents with staleness info.
+
+---
+
+## Signatures
+
+### GET /v1/signing/public-key
+
+Get runtime public key.
+
+```bash
+curl http://localhost:8097/v1/signing/public-key
+```
+
+**Response:**
+```json
+{
+  "key_id": "81cee45e9ab518db",
+  "algorithm": "ed25519",
+  "public_key": "-----BEGIN PUBLIC KEY-----..."
+}
+```
+
+---
+
+## Event Types
+
+Canonical event vocabulary:
+
+| Event Type | Description |
+|------------|-------------|
+| `input_received` | Input received |
+| `output_produced` | Output produced |
+| `tool_invoked` | Tool called |
+| `tool_completed` | Tool returned |
+| `environment_snapshot` | Environment captured |
+| `delegated` | Sub-agent spawned |
+| `approved` | Human approval granted |
+| `blocked` | Execution blocked |
+
+### GET /v1/protocol/event-vocabulary
+
+Get full event mapping.
