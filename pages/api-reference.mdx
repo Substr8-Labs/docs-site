@@ -108,7 +108,7 @@ curl -X POST http://localhost:8097/v1/run/end \
 }
 ```
 
-### GET /v1/runproof/{run_id}
+### GET /v1/runproof/\{run_id\}
 
 Get the full RunProof.
 
@@ -116,7 +116,7 @@ Get the full RunProof.
 curl http://localhost:8097/v1/runproof/run-abc123
 ```
 
-### GET /v1/runproof/{run_id}/verify
+### GET /v1/runproof/\{run_id\}/verify
 
 Verify proof integrity and signatures.
 
@@ -158,7 +158,7 @@ curl -X POST http://localhost:8097/v1/proof-graph/link \
 
 **Relation Types:** `retry`, `delegation`, `branch`, `approval`, `dependency`, `merge`
 
-### GET /v1/proof-graph/{root_id}
+### GET /v1/proof-graph/\{root_id\}
 
 Get full graph from root.
 
@@ -178,7 +178,7 @@ curl http://localhost:8097/v1/proof-graph/run-root
 }
 ```
 
-### GET /v1/runproof/{run_id}/ancestry
+### GET /v1/runproof/\{run_id\}/ancestry
 
 Get lineage to root.
 
@@ -186,7 +186,7 @@ Get lineage to root.
 curl http://localhost:8097/v1/runproof/run-child/ancestry
 ```
 
-### GET /v1/runproof/{run_id}/descendants
+### GET /v1/runproof/\{run_id\}/descendants
 
 Get all children.
 
@@ -194,7 +194,7 @@ Get all children.
 curl http://localhost:8097/v1/runproof/run-parent/descendants
 ```
 
-### GET /v1/proof-graph/{root_id}/verify
+### GET /v1/proof-graph/\{root_id\}/verify
 
 Verify and sign entire graph.
 
@@ -223,11 +223,11 @@ curl -X POST http://localhost:8097/v1/state-proof \
 
 **State Types:** `memory`, `session`, `workflow`, `agent`
 
-### GET /v1/runproof/{run_id}/state-proofs
+### GET /v1/runproof/\{run_id\}/state-proofs
 
 Get state proofs for a run.
 
-### GET /v1/state-chain/{state_type}/verify
+### GET /v1/state-chain/\{state_type\}/verify
 
 Verify state chain integrity.
 
@@ -259,11 +259,11 @@ curl -X POST http://localhost:8097/v1/policy-binding \
 
 **Binding Status:** `applied`, `violated`, `bypassed`
 
-### GET /v1/runproof/{run_id}/policies
+### GET /v1/runproof/\{run_id\}/policies
 
 Get all policies for a run.
 
-### GET /v1/policy/{policy_id}/runs
+### GET /v1/policy/\{policy_id\}/runs
 
 Get all runs governed by a policy.
 
@@ -290,11 +290,11 @@ curl -X POST http://localhost:8097/v1/anchor \
 
 **Anchor Types:** `bitcoin`, `ethereum`, `solana`, `notary`, `timestamping_authority`
 
-### GET /v1/anchor/{anchor_id}
+### GET /v1/anchor/\{anchor_id\}
 
 Get anchor status.
 
-### POST /v1/anchor/{anchor_id}/confirm
+### POST /v1/anchor/\{anchor_id\}/confirm
 
 Confirm anchor with transaction details.
 
@@ -315,27 +315,27 @@ List pending anchors.
 
 ## Agent Lifecycle
 
-### POST /v1/agent/{agent_id}/register
+### POST /v1/agent/\{agent_id\}/register
 
 Register an always-on agent.
 
-### POST /v1/agent/{agent_id}/heartbeat
+### POST /v1/agent/\{agent_id\}/heartbeat
 
 Record heartbeat (auto-registers if new).
 
-### POST /v1/agent/{agent_id}/pause
+### POST /v1/agent/\{agent_id\}/pause
 
 Pause an active agent.
 
-### POST /v1/agent/{agent_id}/activate
+### POST /v1/agent/\{agent_id\}/activate
 
 Activate a paused agent.
 
-### POST /v1/agent/{agent_id}/retire
+### POST /v1/agent/\{agent_id\}/retire
 
 Retire an agent (preserves history).
 
-### GET /v1/agent/{agent_id}/lifecycle
+### GET /v1/agent/\{agent_id\}/lifecycle
 
 Get lifecycle status.
 
