@@ -15,7 +15,7 @@ export default {
     type: 'separator',
     title: 'Reference'
   },
-  api: 'API Reference',
+  'api-reference': 'API Reference',
   spec: 'Specification',
   cli: 'CLI Reference',
   cookbook: 'Cookbook',
