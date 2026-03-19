@@ -1,0 +1,336 @@
+# Native Plugin
+
+Generate RunProofs directly from OpenClaw-based runtimes like NemoClaw/OpenShell.
+
+---
+
+## Overview
+
+The native plugin path captures execution-proof events **inside the agent runtime**, without wrapping your code in a Python SDK.
+
+```
+OpenClaw Gateway (NemoClaw/OpenShell)
+         ↓
+  runproof-capture plugin
+         ↓
+   RunProof API (Railway)
+         ↓
+   /verify endpoint
+```
+
+**One-line summary:** NemoClaw secures execution. RunProof proves execution.
+
+---
+
+## Two Proof Paths
+
+| Path | How it works | Best for |
+|------|--------------|----------|
+| **Python SDK** | Wrap your framework (LangGraph, etc.) | Custom runtimes, frameworks |
+| **Native Plugin** | Drop into OpenClaw gateway | NemoClaw, OpenShell, secure runtimes |
+
+This page documents the **Native Plugin** path.
+
+---
+
+## What Gets Captured
+
+The native plugin hooks into the OpenClaw gateway and captures:
+
+| Hook | Captured | Meaning |
+|------|----------|---------|
+| `before_prompt_build` | ✅ | Prompt/environment capture |
+| `before_tool_call` | ✅ | Tool invocation with params hash |
+| `after_tool_call` | ✅ | Tool result with output hash |
+
+These events form a **hash-chained execution trace** with cryptographic proof.
+
+---
+
+## Quick Start
+
+### 1. Install the plugin
+
+```bash
+# Inside NemoClaw sandbox
+cd ~/.openclaw/extensions
+mkdir -p runproof-capture
+# Copy plugin files (index.js, package.json)
+```
+
+### 2. Configure the API endpoint
+
+Set the RunProof API URL in the plugin:
+
+```javascript
+const RUNPROOF_URL = "https://runproof-api-production.up.railway.app";
+const AGENT_ID = "your-agent-id";
+```
+
+### 3. Restart the gateway
+
+```bash
+# Kill existing gateway
+pkill -f openclaw-gatewa
+
+# Start fresh
+nohup openclaw gateway run > /tmp/gateway.log 2>&1 &
+
+# Verify plugin loaded
+grep "runproof-capture" /tmp/gateway.log
+```
+
+### 4. Run an agent command
+
+```bash
+openclaw agent --agent main -m "List files in /tmp"
+```
+
+### 5. Finalize the run
+
+```bash
+curl -X POST "https://runproof-api-production.up.railway.app/v1/run/end" \
+  -H "Content-Type: application/json" \
+  -d '{"run_id": "YOUR_RUN_ID", "success": true}'
+```
+
+### 6. Verify
+
+```bash
+curl "https://runproof-api-production.up.railway.app/v1/runproof/YOUR_RUN_ID/verify"
+```
+
+**Expected output:**
+
+```json
+{
+  "verified": true,
+  "chain_valid": true,
+  "signatures": {
+    "count": 1,
+    "all_valid": true
+  }
+}
+```
+
+---
+
+## Plugin Code
+
+Minimal `index.js` for `runproof-capture`:
+
+```javascript
+const crypto = require("crypto");
+
+const RUNPROOF_URL = "https://runproof-api-production.up.railway.app";
+const AGENT_ID = "my-agent";
+
+function log(msg) { console.log(`[runproof-capture] ${msg}`); }
+function genId(p) { return `${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`; }
+function hash(d) { 
+  return d ? crypto.createHash("sha256")
+    .update(typeof d==="string" ? d : JSON.stringify(d))
+    .digest("hex").slice(0,16) : "null"; 
+}
+
+let run = null;
+
+async function startRun() {
+  if (run) return run;
+  const run_id = genId("run");
+  const trace_id = genId("trace");
+  const res = await fetch(`${RUNPROOF_URL}/v1/run/start`, {
+    method: "POST", 
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ run_id, trace_id, agent_id: AGENT_ID, runtime: "openclaw" })
+  });
+  if (res.ok) { run = { run_id, trace_id }; log(`Run: ${run_id}`); }
+  return run;
+}
+
+async function sendEvent(type, data) {
+  if (!run) return;
+  await fetch(`${RUNPROOF_URL}/v1/run/event`, {
+    method: "POST", 
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ 
+      run_id: run.run_id, trace_id: run.trace_id,
+      event_id: genId("evt"), type, 
+      timestamp: new Date().toISOString(), 
+      source: "runproof-capture", data 
+    })
+  });
+}
+
+module.exports = function(api) {
+  api.on("before_prompt_build", async () => {
+    await startRun();
+    await sendEvent("prompt.build", {});
+  }, { priority: 100 });
+  
+  api.on("before_tool_call", async (ev) => {
+    await startRun();
+    await sendEvent("tool.invoke", { 
+      tool: ev.toolName || "unknown", 
+      params_hash: hash(ev.params) 
+    });
+  }, { priority: 100 });
+  
+  api.on("after_tool_call", async (ev) => {
+    await sendEvent("tool.result", { 
+      tool: ev.toolName || "unknown", 
+      result_hash: hash(ev.result) 
+    });
+  }, { priority: 100 });
+  
+  log("Plugin registered");
+};
+```
+
+---
+
+## HTTP API Reference
+
+| Action | Method | Endpoint |
+|--------|--------|----------|
+| Start run | POST | `/v1/run/start` |
+| Send event | POST | `/v1/run/event` |
+| Finalize run | POST | `/v1/run/end` |
+| Get proof | GET | `/v1/runproof/{run_id}` |
+| **Verify** | GET | `/v1/runproof/{run_id}/verify` |
+
+### Verify Response
+
+```json
+{
+  "run_id": "run-abc123",
+  "verified": true,
+  "chain_valid": true,
+  "signatures": {
+    "count": 1,
+    "all_valid": true,
+    "results": [{
+      "signer_id": "runtime:e91fd80c",
+      "valid": true
+    }]
+  },
+  "root_hash": "3939767aa50fd226..."
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `verified` | Overall verification passed |
+| `chain_valid` | Event hash chain is intact |
+| `signatures.all_valid` | All signatures verified |
+
+---
+
+## Proof Profiles
+
+### execution-proof (v1)
+
+Available in embedded CLI and gateway modes.
+
+**Captures:**
+- Prompt/environment build
+- Tool invocations
+- Tool results
+- Root hash + signature
+
+### full-run-proof (future)
+
+Available in gateway/channel mode only.
+
+**Adds:**
+- Input message envelope
+- Output message envelope
+- Full conversational lineage
+
+---
+
+## Known Caveats
+
+### Manual finalization in v1
+
+Embedded CLI mode supports execution-proof capture, but **finalization is manual** until an automatic terminal trigger is stabilized.
+
+```bash
+# You must call /run/end to finalize
+curl -X POST ".../v1/run/end" -d '{"run_id": "...", "success": true}'
+```
+
+### Hooks not captured in embedded mode
+
+| Hook | Embedded CLI |
+|------|--------------|
+| `message_received` | ❌ |
+| `message_sent` | ❌ |
+
+For full message-envelope proof, use gateway/channel mode.
+
+---
+
+## Troubleshooting
+
+### Plugin loads but no events in API
+
+- Check API URL is correct (not localhost)
+- Verify gateway was restarted after plugin update
+- Check required fields: `event_id`, `source`, `trace_id`
+
+### Events exist but verify fails
+
+- Run was not finalized
+- Wrong `run_id` in verify call
+
+### Run doesn't auto-complete
+
+Expected in v1. Use manual finalization.
+
+---
+
+## Demo Script
+
+A complete demo script is available:
+
+```bash
+# From the substr8 workspace
+./scripts/demo_nemoclaw_native_proof.sh
+```
+
+This script:
+1. Checks NemoClaw accessibility
+2. Runs an agent command
+3. Finds the run in Railway
+4. Finalizes and verifies
+5. Prints the result
+
+---
+
+## Summary
+
+The native plugin path provides:
+
+- **Zero-code integration** — drop into OpenClaw gateway
+- **Tool execution proof** — captures what the agent did
+- **Signed receipts** — cryptographic verification
+- **Railway API** — hosted proof storage
+
+**Current boundary:**
+- `execution-proof` works in embedded CLI mode
+- `full-run-proof` requires gateway/channel mode
+- Embedded CLI finalization is manual in v1
+
+---
+
+## Next Steps
+
+import { Cards, Card } from 'nextra/components'
+
+<Cards>
+  <Card title="RunProof Schema" href="/runproof" />
+  <Card title="Verification" href="/verification" />
+  <Card title="CLI Reference" href="/cli" />
+  <Card title="Architecture" href="/architecture" />
+</Cards>

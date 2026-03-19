@@ -4,12 +4,21 @@ export default {
   'first-runproof': 'Your First RunProof',
   runproof: 'RunProof',
   verification: 'How Verification Works',
+  '---Integration': {
+    type: 'separator',
+    title: 'Integration'
+  },
+  sdk: 'Python SDK',
+  'native-plugin': 'Native Plugin',
+  frameworks: 'Frameworks',
+  '---Reference': {
+    type: 'separator',
+    title: 'Reference'
+  },
   spec: 'Specification',
+  cli: 'CLI Reference',
   cookbook: 'Cookbook',
   examples: 'Examples',
-  cli: 'CLI Reference',
-  sdk: 'SDK Reference',
-  frameworks: 'Frameworks',
-  why: 'Why Substr8',
-  architecture: 'Architecture'
+  architecture: 'Architecture',
+  why: 'Why Substr8'
 }

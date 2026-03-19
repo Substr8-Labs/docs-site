@@ -44,7 +44,18 @@ Not a log. Not telemetry. A receipt.
 
 ---
 
+## Two Integration Paths
+
+| Path | How it works | Best for |
+|------|--------------|----------|
+| **[Python SDK](/sdk)** | Wrap your framework | LangGraph, custom runtimes |
+| **[Native Plugin](/native-plugin)** | Drop into OpenClaw gateway | NemoClaw, OpenShell, secure runtimes |
+
+---
+
 ## Try It (60 seconds)
+
+### Python SDK
 
 ```bash
 pip install substr8-core substr8-cli
@@ -65,6 +76,27 @@ substr8 proof inspect runproof.json
 ```
 
 **That's it.** You can now see exactly what your agent did.
+
+### Native Plugin (OpenClaw)
+
+```bash
+# Inside NemoClaw/OpenShell sandbox
+openclaw agent -m "List files in /tmp"
+
+# Finalize and verify
+curl -X POST ".../v1/run/end" -d '{"run_id": "...", "success": true}'
+curl ".../v1/runproof/.../verify"
+```
+
+```json
+{
+  "verified": true,
+  "chain_valid": true,
+  "signatures": { "all_valid": true }
+}
+```
+
+**Zero code changes.** Drop the plugin into your OpenClaw gateway.
 
 ---
 
@@ -97,9 +129,9 @@ Upload any RunProof and inspect all 4 views:
 import { Cards, Card } from 'nextra/components'
 
 <Cards>
-  <Card title="Quickstart" href="/quickstart" />
+  <Card title="Python SDK" href="/sdk" />
+  <Card title="Native Plugin" href="/native-plugin" />
   <Card title="Your First RunProof" href="/first-runproof" />
-  <Card title="CLI Reference" href="/cli" />
   <Card title="Specification" href="/spec" />
 </Cards>
 
