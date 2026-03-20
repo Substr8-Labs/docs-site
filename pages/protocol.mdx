@@ -22,6 +22,20 @@ RunProof is not just a receipt format — it's a **protocol** for verifiable age
 └─────────────────────────────────────────────────────┘
 ```
 
+### Layer Availability
+
+| Layer | Status | Notes |
+|-------|--------|-------|
+| Layer 1: Receipts | ✅ Available | execution-proof + full-run-proof |
+| Layer 2: Signatures | ✅ Available | Ed25519 runtime signatures |
+| Layer 3: Proof Graphs | 🔶 In Progress | Lineage fields defined, composition rules in v1.3 |
+| Layer 4: State Proofs | 📋 Planned | Schema reserved |
+| Layer 5: Policy Binding | 📋 Planned | ACC integration |
+| Layer 6: External Anchoring | 📋 Planned | Blockchain/notary anchors |
+| Layer 7: Agent Lifecycle | 📋 Planned | Always-on agent support |
+
+*v1.2 stabilizes Layers 1-2. Higher layers follow the [roadmap](/architecture).*
+
 ---
 
 ## Layer 1: Receipts

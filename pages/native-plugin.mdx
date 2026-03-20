@@ -228,24 +228,67 @@ module.exports = function(api) {
 
 ## Proof Profiles
 
-### execution-proof (v1)
+The Native Plugin supports two proof profiles, depending on runtime environment and event fidelity.
 
-Available in embedded CLI and gateway modes.
+### execution-proof
+
+**Available today.**
+
+Designed for embedded/runtime-native execution surfaces where tool/action-level proof is the main requirement.
 
 **Captures:**
 - Prompt/environment build
 - Tool invocations
 - Tool results
-- Root hash + signature
+- Completion/finalization
+- Receipt generation + verification
 
-### full-run-proof (future)
+**Current status:**
+| Check | Status |
+|-------|--------|
+| Golden receipts verified | ✅ |
+| Stable proof generation | ✅ |
+| Live NemoClaw revalidation | ⚠️ Pending plugin reinstall |
 
-Available in gateway/channel mode only.
+### full-run-proof
 
-**Adds:**
-- Input message envelope
-- Output message envelope
-- Full conversational lineage
+**Available today on gateway/channel deployments.**
+
+Designed for environments where inbound/outbound message envelopes are available.
+
+**Captures everything in execution-proof, plus:**
+- `message_received` event
+- `message_sent` event
+- Richer run boundaries
+- End-to-end conversational verification
+
+**Current status:**
+| Check | Status |
+|-------|--------|
+| Live on gateway/channel path | ✅ |
+| Verified end to end | ✅ |
+
+---
+
+## Environment Support
+
+| Environment | execution-proof | full-run-proof | Notes |
+|-------------|-----------------|----------------|-------|
+| Gateway (Telegram/Discord) | ✅ | ✅ | Full support |
+| Embedded CLI (NemoClaw) | ✅ | ❌ | No message envelope |
+| Python SDK | ✅ | Varies | Framework-dependent |
+
+---
+
+## Finalization Behavior
+
+| Mode | Auto-finalize | Manual finalize |
+|------|---------------|-----------------|
+| Gateway (with streaming) | Via `session_end` | `/v1/run/end` API |
+| Gateway (no streaming) | Via `message_sent` | `/v1/run/end` API |
+| Embedded CLI | ❌ | `/v1/run/end` API required |
+
+**Note:** Auto-finalization via `session:end` and `message:sent` events is being hardened in v1.3.
 
 ---
 
@@ -317,10 +360,11 @@ The native plugin path provides:
 - **Signed receipts** — cryptographic verification
 - **Railway API** — hosted proof storage
 
-**Current boundary:**
-- `execution-proof` works in embedded CLI mode
-- `full-run-proof` requires gateway/channel mode
-- Embedded CLI finalization is manual in v1
+**v1.2 Status (March 2026):**
+- `execution-proof` — golden-verified and stable ✅
+- `full-run-proof` — live on gateway/channel path ✅
+- Live NemoClaw execution-proof — pending plugin reinstall ⚠️
+- Auto-finalization — deferred to v1.3
 
 ---
 
