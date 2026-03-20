@@ -1,0 +1,91 @@
+# RunProof Current Status
+
+**v1.2 Stabilization: Soft Complete**
+
+*Last updated: March 2026*
+
+---
+
+## What is Working Today
+
+| Component | Status |
+|-----------|--------|
+| Proof generation | ✅ Available |
+| Manual/compact finalization | ✅ Stable |
+| Golden receipt verification (both profiles) | ✅ Verified |
+| Live full-run-proof (gateway/channel) | ✅ Working |
+| Verifier (CLI + API) | ✅ Stable |
+
+---
+
+## Proof Profiles
+
+| Profile | Status | Environment |
+|---------|--------|-------------|
+| **execution-proof** | ✅ Golden-verified | Embedded/runtime-native |
+| **full-run-proof** | ✅ Live today | Gateway/channel (Telegram, Discord) |
+
+---
+
+## What is Pending in v1.3
+
+| Item | Description |
+|------|-------------|
+| Hook registration fix | New hook events not loading on gateway restart |
+| Auto-finalization | `session:end` and `message:sent` triggers |
+| Live NemoClaw revalidation | Plugin reinstall + execution-proof test |
+
+---
+
+## Protocol Layers
+
+| Layer | Status |
+|-------|--------|
+| Layer 1: Receipts | ✅ Available |
+| Layer 2: Signatures | ✅ Available |
+| Layer 3: Proof Graphs | 🔶 In Progress |
+| Layer 4: State Proofs | 📋 Planned |
+| Layer 5: Policy Binding | 📋 Planned |
+| Layer 6: External Anchoring | 📋 Planned |
+| Layer 7: Agent Lifecycle | 📋 Planned |
+
+---
+
+## Golden Receipts
+
+Canonical verified receipts for reference:
+
+| Profile | Run ID | Verification |
+|---------|--------|--------------|
+| execution-proof | `run-mmxcczh6-5ntbs6` | [Verify →](https://runproof-api-production.up.railway.app/v1/runproof/run-mmxcczh6-5ntbs6/verify) |
+| full-run-proof | `run-mmy1tsup-rkdcbu` | [Verify →](https://runproof-api-production.up.railway.app/v1/runproof/run-mmy1tsup-rkdcbu/verify) |
+
+---
+
+## Environment Support
+
+| Environment | execution-proof | full-run-proof | Notes |
+|-------------|-----------------|----------------|-------|
+| Gateway (Telegram/Discord) | ✅ | ✅ | Full support |
+| Embedded CLI (NemoClaw) | ✅ | ⚠️ Partial | No message envelope |
+| Python SDK | ✅ | Varies | Framework-dependent |
+
+---
+
+## Release Notes
+
+### v1.2 (March 2026)
+- Stabilized proof generation and verification
+- Fixed timeout defaults (5s → 30s)
+- Fixed endpoint consistency (Railway URLs)
+- Improved plugin logging
+- Documented finalization semantics
+- Verified golden receipts for both profiles
+
+### v1.1
+- Added full-run-proof with message envelope capture
+- Gateway/channel integration
+
+### v1.0
+- Initial execution-proof release
+- Hash chain + Merkle root + signature verification

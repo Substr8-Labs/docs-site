@@ -351,6 +351,35 @@ This script:
 
 ---
 
+---
+
+## What RunProof Proves Today
+
+RunProof proves the integrity of captured execution events by:
+
+- Hashing event data into a tamper-evident chain
+- Producing a root hash commitment
+- Signing the receipt
+- Allowing independent verification with verify-kit or the `/verify` endpoint
+
+**Today, this means RunProof can prove:**
+- That an agent run occurred
+- Which execution events were captured
+- That the event chain has not been tampered with
+- That the receipt verifies independently
+
+RunProof does not yet claim full multi-agent, full state-transition, or full policy/ledger proof. Those are part of the broader [protocol roadmap](/protocol).
+
+---
+
+## Current Note on Finalization
+
+Manual and compact-based finalization are **stable today**.
+
+Automatic finalization via `session:end` and `message:sent` is planned for v1.3, alongside a hook registration/reload fix.
+
+---
+
 ## Summary
 
 The native plugin path provides:

@@ -8,6 +8,8 @@ Substr8 verification checks three things:
 2. **The trace represents exactly the events that occurred**
 3. **The proof was created by the expected agent**
 
+> **What verification confirms:** The verifier checks the integrity of the receipt currently provided — hash-chain validity, root hash integrity, and signature validity. Verification confirms the receipt is internally consistent and untampered. It does not by itself imply broader state, policy, or multi-agent guarantees unless those proof layers are explicitly present in the receipt.
+
 ---
 
 ## Step 1 — Hash Chain Integrity

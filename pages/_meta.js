@@ -1,9 +1,11 @@
 export default {
   index: 'Introduction',
+  status: 'Current Status',
   quickstart: 'Getting Started',
   'first-runproof': 'Your First RunProof',
   runproof: 'RunProof',
   verification: 'How Verification Works',
+  protocol: 'Protocol Layers',
   '---Integration': {
     type: 'separator',
     title: 'Integration'
