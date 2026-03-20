@@ -1,0 +1,203 @@
+# RunProof FAQ
+
+**Questions leaders ask before they trust a verification layer**
+
+---
+
+## 1. Is this just a green tick?
+
+No.
+
+A green tick in a UI is only useful if it is backed by something independently checkable.
+
+RunProof is designed to produce a cryptographically verifiable receipt for an agent run. That receipt can be checked outside the Substr8 platform to confirm that:
+
+- The captured event chain has not been tampered with
+- The root hash is valid
+- The signature is valid
+- The receipt is internally consistent
+
+So the value is not the green tick itself. The value is the portable proof behind it.
+
+> The green tick is only the presentation layer.
+> The receipt is the substance.
+
+---
+
+## 2. How is this different from logs?
+
+Logs are useful, but they usually live inside the trust boundary of the system that produced them.
+
+That means most logs answer:
+- What the system says happened
+- What operators can inspect in that platform
+- What a database or dashboard currently shows
+
+RunProof is aiming at a different standard.
+
+It turns captured execution events into a tamper-evident receipt that can be verified independently of the original runtime or UI.
+
+**In simple terms:**
+- Logs help you *inspect* a run
+- RunProof helps you *verify* a run
+
+Over time, the protocol expands that from single-run verification into:
+- Proof graphs
+- State proofs
+- Policy proofs
+- Multi-agent workflow verification
+- External anchoring
+
+> This is not "better logs."
+> It is a different trust model.
+
+---
+
+## 3. What do I need to verify independently?
+
+The goal is to make independent verification lightweight.
+
+**In the current model, you need:**
+- The receipt artifact
+- A verifier such as verify-kit or a compatible verification endpoint
+
+**The verifier checks the receipt for:**
+- Hash-chain integrity
+- Root hash integrity
+- Signature validity
+- Internal consistency
+
+That means you do not have to trust the Substr8 UI alone.
+
+You can take the receipt and verify it yourself.
+
+> The long-term principle is:
+> verification should be offline-capable, inspectable, and portable.
+
+That is why verify-kit matters.
+
+---
+
+## 4. What about my data? Do you see my IP?
+
+The design goal is to minimize exposure of sensitive data and avoid making the verification layer a place where raw proprietary information has to live.
+
+**At the proof layer, what matters most is:**
+- Captured event structure
+- Cryptographic fingerprints
+- Receipt integrity
+- Verification metadata
+
+In practice, organizations can choose how much raw content they include in the proof path versus how much is represented through hashes, references, or redacted forms.
+
+**The principle is simple:**
+
+> RunProof should prove integrity without requiring unnecessary access to your underlying IP.
+
+For sensitive environments, the target model is:
+- Your runtime keeps the raw data
+- The proof layer captures only what is needed for verification
+- Receipts can be verified without exposing the full underlying business payload
+
+This is also why Substr8 fits well beside secure runtimes like NemoClaw/OpenShell.
+
+> They help protect execution.
+> RunProof helps prove it.
+
+---
+
+## 5. What about latency? Isn't this extra overhead?
+
+That depends on how the proof layer is integrated, but the goal is to keep the critical path as light as possible.
+
+RunProof is not meant to become a heavy inline bottleneck that slows every system decision.
+
+**The design principle is:**
+- Capture important execution events
+- Hash efficiently
+- Finalize receipts at logical boundaries
+- Keep independent verification separate from the runtime critical path where possible
+
+In other words, verification and proof generation should be operationally lightweight relative to the workload being proven.
+
+For many environments, the important distinction is this:
+- Execution needs to stay fast
+- Verification needs to stay trustworthy
+
+> Substr8 is being built so that you do not have to trade one completely against the other.
+
+---
+
+## 6. Do I need to re-engineer my systems?
+
+No — not if the integration is done properly.
+
+The goal is not to force a full redesign of your architecture.
+
+**RunProof is being developed to fit through integration surfaces such as:**
+- Runtime plugins
+- SDK paths
+- Gateway/channel integrations
+- Adapter-based runtime targets
+
+That means organizations should be able to start with a narrow proof surface, for example:
+- One runtime
+- One workflow
+- One agent class
+- One customer-facing channel
+
+Then expand from there.
+
+**The right adoption path is usually:**
+1. Prove one important workflow
+2. Verify it independently
+3. Expand to more runs and environments
+4. Grow into richer proof types over time
+
+> This should be approached as a layered integration, not a full platform rewrite.
+
+---
+
+## 7. Why now?
+
+Because secure runtimes are making agent execution easier, which increases the need for portable proof.
+
+As agent systems become more capable, organizations will ask harder questions:
+
+- What exactly did the agent do?
+- Under what identity?
+- Under what policy?
+- What changed as a result?
+- Can we verify the outcome later?
+- Can we verify this across multiple agents and systems?
+
+RunProof starts by answering the first of those questions well.
+
+Then it expands into the rest.
+
+---
+
+## Current Status
+
+Today, RunProof's strongest implemented surface is run-level receipt generation and verification.
+
+**That includes:**
+- Execution-proof
+- Full-run-proof in gateway/channel environments
+- Independent verification of receipts
+
+**The broader protocol roadmap includes:**
+- Proof graphs
+- State proofs
+- Policy binding
+- External anchoring
+- Lifecycle and multi-agent proofs
+
+> We are not claiming the whole future is finished.
+> We are claiming the foundational proof primitive is real.
+
+---
+
+## One-Line Summary
+
+**Substr8 is building a verification layer for agent systems: not just to show that a run happened, but to make that run independently provable.**

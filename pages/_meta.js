@@ -1,6 +1,7 @@
 export default {
   index: 'Introduction',
   status: 'Current Status',
+  faq: 'FAQ',
   quickstart: 'Getting Started',
   'first-runproof': 'Your First RunProof',
   runproof: 'RunProof',
